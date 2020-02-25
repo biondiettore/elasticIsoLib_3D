@@ -1,0 +1,6 @@
+[submodule "elastic_iso_lib_3d/external/ioLibs"]
+	path = elastic_iso_lib_3d/external/ioLibs
+	url = http://zapad.Stanford.EDU/SEP-external/sep-iolibs.git
+[submodule "elastic_iso_lib_3d/external/pySolver"]
+	path = elastic_iso_lib_3d/external/pySolver
+	url = http://zapad.Stanford.EDU/ettore88/python-solver.git
