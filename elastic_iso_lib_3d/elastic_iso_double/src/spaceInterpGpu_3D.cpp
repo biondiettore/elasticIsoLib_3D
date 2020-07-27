@@ -1,8 +1,7 @@
 #include <double1DReg.h>
 #include <double2DReg.h>
-#include <double3DReg.h>
 #include <iostream>
-#include "deviceGpu_3D.h"
+#include "spaceInterpGpu_3D.h"
 #include <boost/math/special_functions/sinc.hpp>
 #include <boost/math/special_functions/cos_pi.hpp>
 #include <boost/math/distributions/normal.hpp>
@@ -11,7 +10,7 @@
 
 
 // Constructor #1 -- Only for irregular geometry
-spaceInterpGpu_3D::spaceInterpGpu_3D(const std::shared_ptr<double1DReg> zCoord, const std::shared_ptr<double1DReg> xCoord, const std::shared_ptr<double1DReg> yCoord, const std::shared_ptr<SEP::hypercube> elasticParamHypercube, int &nt, std::shared_ptr<paramObj> par, int dipole=0, double zDipoleShift=0, double xDipoleShift=0, double yDipoleShift=0, std::string interpMethod="linear", int hFilter1d=1){
+spaceInterpGpu_3D::spaceInterpGpu_3D(const std::shared_ptr<double1DReg> zCoord, const std::shared_ptr<double1DReg> xCoord, const std::shared_ptr<double1DReg> yCoord, const std::shared_ptr<SEP::hypercube> elasticParamHypercube, int &nt, std::shared_ptr<paramObj> par, int dipole, double zDipoleShift, double xDipoleShift, double yDipoleShift, std::string interpMethod, int hFilter1d){
 
 	// Get domain dimensions
 	_par = par;

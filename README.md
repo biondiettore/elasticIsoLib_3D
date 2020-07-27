@@ -17,7 +17,7 @@ To build library run:
 ```
 cd build
 
-cmake -DCMAKE_INSTALL_PREFIX=installation_path -DCMAKE_CUDA_COMPILER=/usr/local/cuda-10.1/bin/nvcc -DCMAKE_BUILD_TYPE=Debug ../elastic_iso_lib/
+cmake -DCMAKE_INSTALL_PREFIX=installation_path -DCMAKE_CUDA_COMPILER=/usr/local/cuda-10.1/bin/nvcc ../elastic_iso_lib_3d/
 
 make install
 
