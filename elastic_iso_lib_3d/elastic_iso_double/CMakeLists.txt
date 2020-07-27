@@ -7,17 +7,17 @@ include_directories(include)
 
 #Header files to include during installation
 set(INC_DIR include)
-set(HEADERS ${INC_DIR}/
+set(HEADERS ${INC_DIR}/spaceInterpGpu_3D.h
 )
 
 #Files to be compiled
 set(SRC_DIR src)
 #Files for nonlinear operator library
-set(SOURCE_NL 	${SRC_DIR}/
+set(SOURCE_NL ${SRC_DIR}/spaceInterpGpu_3D.cpp
 )
 
 #Files for Born operator library
-set(SOURCE_BORN 	${SRC_DIR}/
+set(SOURCE_BORN ${SRC_DIR}/
 )
 
 #SEP LIBRARY DIRECTORIES

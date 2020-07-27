@@ -42,7 +42,7 @@ find_package(TBB REQUIRED)
 add_subdirectory(elastic_iso_double)
 
 # Elastic isotropic python interface
-add_subdirectory(python/python_double)
+# add_subdirectory(python/python_double)
 
 execute_process(COMMAND git submodule update --init --recursive -- external/pySolver WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(external/pySolver/GenericSolver)
