@@ -1,7 +1,280 @@
 #include "varElaDeclare_3D.h"
 #include <stdio.h>
 
+/******************************************************************************/
+/*********************************** Injection ********************************/
+/******************************************************************************/
 
+/*															SOURCE INJECTION      												*/
+// NORMAL STRESSES
+/* Interpolate and inject source on center grid */
+__global__ void ker_inject_source_centerGrid_3D(double *dev_signalIn_sigmaxx, double *dev_signalIn_sigmayy, double *dev_signalIn_sigmazz, double *dev_timeSlice_sigmaxx, double *dev_timeSlice_sigmayy, double *dev_timeSlice_sigmazz, long long its, long long it2, long long *dev_sourcesPositionRegCenterGrid, long long nSourcesRegCenterGrid){
+
+    //thread per source device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nSourcesRegCenterGrid) {
+			dev_timeSlice_sigmaxx[dev_sourcesPositionRegCenterGrid[iThread]] += dev_signalIn_sigmaxx[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmaxx[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+			dev_timeSlice_sigmayy[dev_sourcesPositionRegCenterGrid[iThread]] += dev_signalIn_sigmayy[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmayy[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+			dev_timeSlice_sigmazz[dev_sourcesPositionRegCenterGrid[iThread]] += dev_signalIn_sigmazz[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmazz[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+
+// PARTICLE VELOCITIES
+/* Interpolate and inject source on x shifted grid */
+__global__ void ker_inject_source_xGrid_3D(double *dev_signalIn_vx, double *dev_timeSlice_vx, long long its, long long it2, long long *dev_sourcesPositionRegXGrid, long long nSourcesRegXGrid){
+
+    //thread per source device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nSourcesRegXGrid) {
+				dev_timeSlice_vx[dev_sourcesPositionRegXGrid[iThread]] += dev_signalIn_vx[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_vx[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+/* Interpolate and inject source on y shifted grid */
+__global__ void ker_inject_source_yGrid_3D(double *dev_signalIn_vy, double *dev_timeSlice_vy, long long its, long long it2, long long *dev_sourcesPositionRegYGrid, long long nSourcesRegYGrid){
+
+    //thread per source device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nSourcesRegYGrid) {
+				dev_timeSlice_vy[dev_sourcesPositionRegYGrid[iThread]] += dev_signalIn_vy[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_vy[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+/* Interpolate and inject source on z shifted grid */
+__global__ void ker_inject_source_zGrid_3D(double *dev_signalIn_vz, double *dev_timeSlice_vz, long long its, long long it2, long long *dev_sourcesPositionRegZGrid, long long nSourcesRegZGrid){
+
+    //thread per source device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nSourcesRegZGrid) {
+				dev_timeSlice_vz[dev_sourcesPositionRegZGrid[iThread]] += dev_signalIn_vz[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_vz[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+
+// SHEAR STRESSES
+/* Interpolate and inject source on xz shifted grid */
+__global__ void ker_inject_source_xzGrid_3D(double *dev_signalIn_sigmaxz, double *dev_timeSlice_sigmaxz, long long its, long long it2, long long *dev_sourcesPositionRegXZGrid, long long nSourcesRegXZGrid){
+
+    //thread per source device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nSourcesRegXZGrid) {
+				dev_timeSlice_sigmaxz[dev_sourcesPositionRegXZGrid[iThread]] += dev_signalIn_sigmaxz[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmaxz[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+/* Interpolate and inject source on xy shifted grid */
+__global__ void ker_inject_source_xyGrid_3D(double *dev_signalIn_sigmaxy, double *dev_timeSlice_sigmaxy, long long its, long long it2, long long *dev_sourcesPositionRegXYGrid, long long nSourcesRegXYGrid){
+
+    //thread per source device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nSourcesRegXYGrid) {
+				dev_timeSlice_sigmaxy[dev_sourcesPositionRegXYGrid[iThread]] += dev_signalIn_sigmaxy[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmaxy[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+/* Interpolate and inject source on yz shifted grid */
+__global__ void ker_inject_source_yzGrid_3D(double *dev_signalIn_sigmayz, double *dev_timeSlice_sigmayz, long long its, long long it2, long long *dev_sourcesPositionRegYZGrid, long long nSourcesRegYZGrid){
+
+    //thread per source device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nSourcesRegYZGrid) {
+				dev_timeSlice_sigmayz[dev_sourcesPositionRegYZGrid[iThread]] += dev_signalIn_sigmayz[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmayz[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+
+
+/*															DATA INJECTION      													*/
+// NORMAL STRESSES
+/* Interpolate and inject data on center grid */
+__global__ void ker_inject_data_centerGrid_3D(double *dev_signalIn_sigmaxx, double *dev_signalIn_sigmayy, double *dev_signalIn_sigmazz, double *dev_timeSlice_sigmaxx, double *dev_timeSlice_sigmayy, double *dev_timeSlice_sigmazz, long long its, long long it2, long long *dev_receiversPositionRegCenterGrid, long long nReceiversRegCenterGrid){
+
+    //thread per receiver device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nReceiversRegCenterGrid) {
+			dev_timeSlice_sigmaxx[dev_receiversPositionRegCenterGrid[iThread]] += dev_signalIn_sigmaxx[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmaxx[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+			dev_timeSlice_sigmayy[dev_receiversPositionRegCenterGrid[iThread]] += dev_signalIn_sigmayy[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmayy[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+			dev_timeSlice_sigmazz[dev_receiversPositionRegCenterGrid[iThread]] += dev_signalIn_sigmazz[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmazz[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+
+// PARTICLE VELOCITIES
+/* Interpolate and inject data on x shifted grid */
+__global__ void ker_inject_data_xGrid_3D(double *dev_signalIn_vx, double *dev_timeSlice_vx, long long its, long long it2, long long *dev_receiversPositionRegXGrid, long long nReceiversRegXGrid){
+
+    //thread per receiver device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nReceiversRegXGrid) {
+				dev_timeSlice_vx[dev_receiversPositionRegXGrid[iThread]] += dev_signalIn_vx[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_vx[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+/* Interpolate and inject data on y shifted grid */
+__global__ void ker_inject_data_yGrid_3D(double *dev_signalIn_vy, double *dev_timeSlice_vy, long long its, long long it2, long long *dev_receiversPositionRegYGrid, long long nReceiversRegYGrid){
+
+    //thread per receiver device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nReceiversRegYGrid) {
+				dev_timeSlice_vy[dev_receiversPositionRegYGrid[iThread]] += dev_signalIn_vy[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_vy[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+/* Interpolate and inject data on z shifted grid */
+__global__ void ker_inject_data_zGrid_3D(double *dev_signalIn_vz, double *dev_timeSlice_vz, long long its, long long it2, long long *dev_receiversPositionRegZGrid, long long nReceiversRegZGrid){
+
+    //thread per receiver device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nReceiversRegZGrid) {
+				dev_timeSlice_vz[dev_receiversPositionRegZGrid[iThread]] += dev_signalIn_vz[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_vz[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+
+// SHEAR STRESSES
+/* Interpolate and inject data on xz shifted grid */
+__global__ void ker_inject_data_xzGrid_3D(double *dev_signalIn_sigmaxz, double *dev_timeSlice_sigmaxz, long long its, long long it2, long long *dev_receiversPositionRegXZGrid, long long nReceiversRegXZGrid){
+
+    //thread per receiver device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nReceiversRegXZGrid) {
+				dev_timeSlice_sigmaxz[dev_receiversPositionRegXZGrid[iThread]] += dev_signalIn_sigmaxz[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmaxz[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+/* Interpolate and inject data on xy shifted grid */
+__global__ void ker_inject_data_xyGrid_3D(double *dev_signalIn_sigmaxy, double *dev_timeSlice_sigmaxy, long long its, long long it2, long long *dev_receiversPositionRegXYGrid, long long nReceiversRegXYGrid){
+
+    //thread per receiver device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nReceiversRegXYGrid) {
+				dev_timeSlice_sigmaxy[dev_receiversPositionRegXYGrid[iThread]] += dev_signalIn_sigmaxy[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmaxy[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+/* Interpolate and inject data on yz shifted grid */
+__global__ void ker_inject_data_yzGrid_3D(double *dev_signalIn_sigmayz, double *dev_timeSlice_sigmayz, long long its, long long it2, long long *dev_receiversPositionRegYZGrid, long long nReceiversRegYZGrid){
+
+    //thread per receiver device
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nReceiversRegYZGrid) {
+				dev_timeSlice_sigmayz[dev_receiversPositionRegYZGrid[iThread]] += dev_signalIn_sigmayz[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmayz[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+		}
+}
+
+/******************************************************************************/
+/******************************* Extraction ***********************************/
+/******************************************************************************/
+
+/*															SOURCE EXTRACTION      												*/
+// NORMAL STRESSES
+/*extract and interpolate source thar are on center grid */
+__global__ void ker_record_source_centerGrid_3D(double *dev_newTimeSlice_sigmaxx, double *dev_newTimeSlice_sigmazz, double *dev_signalOut_sigmaxx, double *dev_signalOut_sigmazz, long long its, long long it2, long long *dev_sourcesPositionRegCenterGrid, long long nSourcesRegCenterGrid) {
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nSourcesRegCenterGrid){
+			dev_signalOut_sigmaxx[dev_nts*iThread+its]   += dev_newTimeSlice_sigmaxx[dev_sourcesPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmaxx[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmaxx[dev_sourcesPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+	    dev_signalOut_sigmazz[dev_nts*iThread+its]   += dev_newTimeSlice_sigmazz[dev_sourcesPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmazz[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmazz[dev_sourcesPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+		}
+}
+
+// PARTICLE VELOCITIES
+/*extract and interpolate source tha are on x shifted grid */
+__global__ void ker_record_source_xGrid_3D(double *dev_newTimeSlice_vx, double *dev_signalOut_vx, long long its, long long it2, long long *dev_sourcesPositionRegXGrid, long long nSourcesRegXGrid) {
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nSourcesRegXGrid){
+			dev_signalOut_vx[dev_nts*iThread+its]   += dev_newTimeSlice_vx[dev_sourcesPositionRegXGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_vx[dev_nts*iThread+its+1] += dev_newTimeSlice_vx[dev_sourcesPositionRegXGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+		}
+}
+/*extract and interpolate source tha are on z shifted grid */
+__global__ void ker_record_source_zGrid_3D(double *dev_newTimeSlice_vz, double *dev_signalOut_vz, long long its, long long it2, long long *dev_sourcesPositionRegZGrid, long long nSourcesRegZGrid) {
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nSourcesRegZGrid){
+			dev_signalOut_vz[dev_nts*iThread+its]   += dev_newTimeSlice_vz[dev_sourcesPositionRegZGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_vz[dev_nts*iThread+its+1] += dev_newTimeSlice_vz[dev_sourcesPositionRegZGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+		}
+}
+
+// SHEAR STRESSES
+/*extract and interpolate source tha are on xz shifted grid */
+__global__ void ker_record_source_xzGrid_3D(double *dev_newTimeSlice_sigmaxz, double *dev_signalOut_sigmaxz, long long its, long long it2, long long *dev_sourcesPositionRegXZGrid, long long nSourcesRegXZGrid) {
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nSourcesRegXZGrid){
+			dev_signalOut_sigmaxz[dev_nts*iThread+its]   += dev_newTimeSlice_sigmaxz[dev_sourcesPositionRegXZGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmaxz[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmaxz[dev_sourcesPositionRegXZGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+		}
+}
+/*extract and interpolate source tha are on xy shifted grid */
+__global__ void ker_record_source_xyGrid_3D(double *dev_newTimeSlice_sigmaxy, double *dev_signalOut_sigmaxy, long long its, long long it2, long long *dev_sourcesPositionRegXYGrid, long long nSourcesRegXYGrid) {
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nSourcesRegXYGrid){
+			dev_signalOut_sigmaxy[dev_nts*iThread+its]   += dev_newTimeSlice_sigmaxy[dev_sourcesPositionRegXYGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmaxy[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmaxy[dev_sourcesPositionRegXYGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+		}
+}
+/*extract and interpolate source tha are on yz shifted grid */
+__global__ void ker_record_source_yzGrid_3D(double *dev_newTimeSlice_sigmayz, double *dev_signalOut_sigmayz, long long its, long long it2, long long *dev_sourcesPositionRegYZGrid, long long nSourcesRegYZGrid) {
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+		if (iThread < nSourcesRegYZGrid){
+			dev_signalOut_sigmayz[dev_nts*iThread+its]   += dev_newTimeSlice_sigmayz[dev_sourcesPositionRegYZGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmayz[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmayz[dev_sourcesPositionRegYZGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+		}
+}
+
+
+/*															 DATA EXTRACTION      												*/
+// NORMAL STRESSES
+/* Extract and interpolate data on center grid */
+__global__ void ker_record_interp_data_centerGrid_3D(double *dev_newTimeSlice_sigmaxx, double *dev_newTimeSlice_sigmazz, double *dev_signalOut_sigmaxx, double *dev_signalOut_sigmazz, long long its, long long it2, long long *dev_receiversPositionRegCenterGrid) {
+
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+    if (iThread < dev_nReceiversRegCenterGrid) {
+	    dev_signalOut_sigmaxx[dev_nts*iThread+its]   += dev_newTimeSlice_sigmaxx[dev_receiversPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmaxx[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmaxx[dev_receiversPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+	    dev_signalOut_sigmazz[dev_nts*iThread+its]   += dev_newTimeSlice_sigmazz[dev_receiversPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmazz[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmazz[dev_receiversPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+    }
+}
+
+// PARTICLE VELOCITIES
+/* Extract and interpolate data on x shifted grid */
+__global__ void ker_record_interp_data_xGrid_3D(double *dev_newTimeSlice_vx, double *dev_signalOut_vx, long long its, long long it2, long long *dev_receiversPositionRegXGrid) {
+
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+    if (iThread < dev_nReceiversRegXGrid) {
+	    dev_signalOut_vx[dev_nts*iThread+its]   += dev_newTimeSlice_vx[dev_receiversPositionRegXGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_vx[dev_nts*iThread+its+1] += dev_newTimeSlice_vx[dev_receiversPositionRegXGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+    }
+}
+/* Extract and interpolate data on z shifted grid */
+__global__ void ker_record_interp_data_zGrid_3D(double *dev_newTimeSlice_vz, double *dev_signalOut_vz, long long its, long long it2, long long *dev_receiversPositionRegZGrid) {
+
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+    if (iThread < dev_nReceiversRegZGrid) {
+	    dev_signalOut_vz[dev_nts*iThread+its]   += dev_newTimeSlice_vz[dev_receiversPositionRegZGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_vz[dev_nts*iThread+its+1] += dev_newTimeSlice_vz[dev_receiversPositionRegZGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+    }
+}
+
+
+// SHEAR STRESSES
+/* Extract and interpolate data on xz shifted grid */
+__global__ void ker_record_interp_data_xzGrid_3D(double *dev_newTimeSlice_sigmaxz, double *dev_signalOut_sigmaxz, long long its, long long it2, long long *dev_receiversPositionRegXZGrid) {
+
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+    if (iThread < dev_nReceiversRegXZGrid) {
+	    dev_signalOut_sigmaxz[dev_nts*iThread+its]   += dev_newTimeSlice_sigmaxz[dev_receiversPositionRegXZGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmaxz[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmaxz[dev_receiversPositionRegXZGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+    }
+}
+/* Extract and interpolate data on xy shifted grid */
+__global__ void ker_record_interp_data_xyGrid_3D(double *dev_newTimeSlice_sigmaxy, double *dev_signalOut_sigmaxy, long long its, long long it2, long long *dev_receiversPositionRegXYGrid) {
+
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+    if (iThread < dev_nReceiversRegXYGrid) {
+	    dev_signalOut_sigmaxy[dev_nts*iThread+its]   += dev_newTimeSlice_sigmaxy[dev_receiversPositionRegXYGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmaxy[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmaxy[dev_receiversPositionRegXYGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+    }
+}
+/* Extract and interpolate data on yz shifted grid */
+__global__ void ker_record_interp_data_yzGrid_3D(double *dev_newTimeSlice_sigmayz, double *dev_signalOut_sigmayz, long long its, long long it2, long long *dev_receiversPositionRegYZGrid) {
+
+    long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
+    if (iThread < dev_nReceiversRegYZGrid) {
+	    dev_signalOut_sigmayz[dev_nts*iThread+its]   += dev_newTimeSlice_sigmayz[dev_receiversPositionRegYZGrid[iThread]] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmayz[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmayz[dev_receiversPositionRegYZGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+    }
+}
 
 
 /******************************************************************************/
@@ -1092,3 +1365,7 @@ __global__ void stepAdjGpu_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_
 	}
 
 }
+
+/******************************************************************************/
+/************************************** Damping *******************************/
+/******************************************************************************/

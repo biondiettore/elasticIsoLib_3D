@@ -41,10 +41,10 @@ target_link_libraries(ELASTIC_ISO_DOUBLE_NL_3D ${LIBS} OpenMP::OpenMP_CXX)
 
 # Compiling the project executables
 # Model padding program for GPU
-# add_executable(padElasticFileGpuMain_3D ${SRC_DIR}/padElasticFileGpuMain_3D.cpp)
-# target_link_libraries(padFileGpuMain_3D ${LIBS} OpenMP::OpenMP_CXX)
+add_executable(padElasticFileGpuMain_3D ${SRC_DIR}/padElasticFileGpuMain_3D.cpp)
+target_link_libraries(padElasticFileGpuMain_3D ${LIBS} OpenMP::OpenMP_CXX)
 
 #Adding libray and header files to install destination
 install(TARGETS ELASTIC_ISO_DOUBLE_NL_3D DESTINATION lib)
-# install(TARGETS padFileGpuMain_3D DESTINATION bin)
+install(TARGETS padElasticFileGpuMain_3D DESTINATION bin)
 install(FILES ${HEADERS} DESTINATION include)
