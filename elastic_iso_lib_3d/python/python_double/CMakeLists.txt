@@ -13,7 +13,7 @@ if (pybind11_FOUND)
   include_directories(${pybind11_INCLUDE_DIR})
   include_directories(${PYTHON_INCLUDE_PATH})
   #library headers
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../elastic_isotropic_operators")
+  # include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../elastic_isotropic_operators")
 
   find_package(PythonLibs)
   include_directories(${PYTHON_INCLUDE_PATH})
@@ -38,11 +38,12 @@ if (pybind11_FOUND)
   target_link_libraries(pyElastic_iso_double_nl_3D PRIVATE ELASTIC_ISO_DOUBLE_NL_3D ${LIBS})
 
   # Installing library
-  install( TARGETS pyElastic_iso_double_nl_3D DESTINATION lib/python) # Module for nonlinear operator
-  install( FILES Elastic_iso_double_3D.py DESTINATION lib/python)
+	set(PYTHON_DIR "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
+  install( TARGETS pyElastic_iso_double_nl_3D DESTINATION ${PYTHON_DIR}) # Module for nonlinear operator
+  # install( FILES Elastic_iso_double_3D.py DESTINATION ${PYTHON_DIR})
 
   # Installing Python executables
-  install( FILES nonlinearPythonDoubleMain_3D.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+  # install( FILES nonlinearPythonDoubleMain_3D.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
 
 else(pybind11_FOUND)
   MESSAGE("WARNING!Did not find pybid11. Not compiling ${PROJECT-NAME}")
