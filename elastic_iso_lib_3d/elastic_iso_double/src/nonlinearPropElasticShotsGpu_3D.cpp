@@ -1,7 +1,7 @@
 #include <vector>
 #include <omp.h>
 #include "nonlinearPropElasticShotsGpu_3D.h"
-// #include "nonlinearPropElasticGpu_3D.h"
+#include "nonlinearPropElasticGpu_3D.h"
 #include <ctime>
 
 nonlinearPropElasticShotsGpu_3D::nonlinearPropElasticShotsGpu_3D(std::shared_ptr<SEP::double4DReg> elasticParam, std::shared_ptr<paramObj> par, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorCenterGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorXGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorYGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorZGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorXZGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorXYGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorYZGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorCenterGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorXGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorYGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorZGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorXZGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorXYGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorYZGrid){
@@ -109,7 +109,7 @@ void nonlinearPropElasticShotsGpu_3D::forward(const bool add, const std::shared_
 	std::shared_ptr<SEP::hypercube> hyperDataSlices(new hypercube(data->getHyper()->getAxis(1), data->getHyper()->getAxis(2), data->getHyper()->getAxis(3)));
 	std::vector<std::shared_ptr<double3DReg>> modelSlicesVector;
 	std::vector<std::shared_ptr<double3DReg>> dataSlicesVector;
-	// std::vector<std::shared_ptr<nonlinearPropElasticGpu_3D>> propObjectVector;
+	std::vector<std::shared_ptr<nonlinearPropElasticGpu_3D>> propObjectVector;
 
 	// Initialization for each GPU:
 	// (1) Creation of vector of objects, model, and data.
@@ -117,12 +117,12 @@ void nonlinearPropElasticShotsGpu_3D::forward(const bool add, const std::shared_
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
 		// Nonlinear propagator object
-		// std::shared_ptr<nonlinearPropElasticGpu_3D> propGpuObject(new nonlinearPropElasticGpu_3D(_fdParamElastic, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
-		// propObjectVector.push_back(propGpuObject);
+		std::shared_ptr<nonlinearPropElasticGpu_3D> propGpuObject(new nonlinearPropElasticGpu_3D(_fdParamElastic, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
+		propObjectVector.push_back(propGpuObject);
 
 		// Display finite-difference parameters info
 		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
-			// propGpuObject->getFdParam()->getInfo();
+			propGpuObject->getFdParam_3D()->getInfo_3D();
 		}
 
 		// Model slice
@@ -155,16 +155,16 @@ void nonlinearPropElasticShotsGpu_3D::forward(const bool add, const std::shared_
 		}
 		// Set acquisition geometry
 		if (constantRecGeom == 1) {
-			// propObjectVector[iGpu]->setAcquisition(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+			propObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
 		} else {
-			// propObjectVector[iGpu]->setAcquisition(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+			propObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
 		}
 
 		// Set GPU number for propagator object
-		// propObjectVector[iGpu]->setGpuNumber(iGpu,iGpuId);
+		propObjectVector[iGpu]->setGpuNumber_3D(iGpu,iGpuId);
 
 		//Launch modeling
-		// propObjectVector[iGpu]->forward(false, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+		propObjectVector[iGpu]->forward(false, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
 
 		// Store dataSlice into data
 		#pragma omp parallel for collapse(3)
@@ -180,7 +180,7 @@ void nonlinearPropElasticShotsGpu_3D::forward(const bool add, const std::shared_
 
 	// Deallocate memory on device
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		// deallocateNonlinearElasticGpu(iGpu,_gpuList[iGpu]);
+		// deallocateNonlinearElasticGpu_3D(iGpu,_gpuList[iGpu]);
 	}
 }
 

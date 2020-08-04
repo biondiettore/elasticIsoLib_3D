@@ -11,6 +11,7 @@ set(HEADERS ${INC_DIR}/spaceInterpGpu_3D.h
 						${INC_DIR}/stagger_3D.h
 						${INC_DIR}/fdParamElastic_3D.h
 						${INC_DIR}/nonlinearPropElasticShotsGpu_3D.h
+						${INC_DIR}/nonlinearPropElasticGpu_3D.h
 )
 
 #Files to be compiled
@@ -20,6 +21,7 @@ set(SOURCE_NL ${SRC_DIR}/spaceInterpGpu_3D.cpp
 							${SRC_DIR}/stagger_3D.cpp
 							${SRC_DIR}/fdParamElastic_3D.cpp
 							${SRC_DIR}/nonlinearPropElasticShotsGpu_3D.cpp
+							${SRC_DIR}/nonlinearPropElasticGpu_3D.cpp
 )
 
 #Files for Born operator library
