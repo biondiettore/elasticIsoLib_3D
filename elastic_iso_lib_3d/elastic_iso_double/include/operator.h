@@ -98,5 +98,5 @@ class Operator
 
 		/******************************** Accessors *************************************/
 		std::shared_ptr<V1> getDomain() { return _domain; }
-  		std::shared_ptr<V2> getRange() { return _range; }
+  	std::shared_ptr<V2> getRange() { return _range; }
 };
