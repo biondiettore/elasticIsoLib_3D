@@ -61,7 +61,7 @@ spaceInterpGpu_3D::spaceInterpGpu_3D(const std::shared_ptr<double1DReg> zCoord, 
 		_nFilter3d = _nFilter3d*2;
 	}
 
-	_gridPointIndex = new int[_nFilter3d*_nDeviceIrreg]; // 1d-array containing the index of all the grid points (on the regular grid) that will be used in the interpolation. The indices are not unique
+	_gridPointIndex = new long long[_nFilter3d*_nDeviceIrreg]; // 1d-array containing the index of all the grid points (on the regular grid) that will be used in the interpolation. The indices are not unique
 	_weight = new double[_nFilter3d*_nDeviceIrreg]; // Weights corresponding to the points on the grid stored in _gridPointIndex
 
 	// Compute list of all grid points used in the interpolation
@@ -163,10 +163,10 @@ void spaceInterpGpu_3D::adjoint(const bool add, std::shared_ptr<double2DReg> sig
 	std::shared_ptr<double2D> d = signalIrreg->_mat;
 	std::shared_ptr<double2D> m = signalReg->_mat;
 
-	for (int iDevice = 0; iDevice < _nDeviceIrreg; iDevice++){ // Loop over acquisition devices' positions
-		for (int iFilter = 0; iFilter < _nFilter3d; iFilter++){ // Loop over neighboring points on regular grid
-			int i1 = iDevice * _nFilter3d + iFilter; // Grid point index
-			int i2 = _indexMap.find(_gridPointIndex[i1])->second; // Get trace number for signalReg
+	for (long long iDevice = 0; iDevice < _nDeviceIrreg; iDevice++){ // Loop over acquisition devices' positions
+		for (long long iFilter = 0; iFilter < _nFilter3d; iFilter++){ // Loop over neighboring points on regular grid
+			long long i1 = iDevice * _nFilter3d + iFilter; // Grid point index
+			long long i2 = _indexMap.find(_gridPointIndex[i1])->second; // Get trace number for signalReg
 			for (int it = 0; it < _nt; it++){
 				(*m)[i2][it] += _weight[i1] * (*d)[iDevice][it];
 			}
@@ -176,7 +176,7 @@ void spaceInterpGpu_3D::adjoint(const bool add, std::shared_ptr<double2DReg> sig
 
 void spaceInterpGpu_3D::checkOutOfBounds(const std::shared_ptr<double1DReg> zCoord, const std::shared_ptr<double1DReg> xCoord, const std::shared_ptr<double1DReg> yCoord){
 
-	int nDevice = zCoord->getHyper()->getAxis(1).n;
+	long long nDevice = zCoord->getHyper()->getAxis(1).n;
 	_nzSmall = _nz - 2 * _fat - _zPadMinus - _zPadPlus;
 	_nxSmall = _nx - 2 * _fat - _xPadMinus - _xPadPlus;
 	_nySmall = _ny - 2 * _fat - 2 * _yPad;
@@ -189,7 +189,7 @@ void spaceInterpGpu_3D::checkOutOfBounds(const std::shared_ptr<double1DReg> zCoo
 	double xMax = xMin + (_nxSmall - 1) * _dx;
   double yMax = yMin + (_nySmall - 1) * _dy;
 
-	for (int iDevice = 0; iDevice < nDevice; iDevice++){
+	for (long long iDevice = 0; iDevice < nDevice; iDevice++){
 		if ( (*zCoord->_mat)[iDevice] - zMax > _errorTolerance || (*zCoord->_mat)[iDevice] - zMin < -_errorTolerance || (*xCoord->_mat)[iDevice] - xMax > _errorTolerance || (*xCoord->_mat)[iDevice] - xMin < -_errorTolerance || (*yCoord->_mat)[iDevice] - yMax > _errorTolerance || (*yCoord->_mat)[iDevice] - yMin < -_errorTolerance ){
 			std::cout << "**** ERROR [deviceGpu_3D]: One of the acquisition devices is out of bounds ****" << std::endl;
 			std::cout << "iDevice = " << iDevice << std::endl;
@@ -213,20 +213,20 @@ void spaceInterpGpu_3D::checkOutOfBounds(const std::shared_ptr<double1DReg> zCoo
 // Compute weights for linear interpolation
 void spaceInterpGpu_3D::calcLinearWeights(){
 
-	for (int iDevice = 0; iDevice < _nDeviceIrreg; iDevice++) {
+	for (long long iDevice = 0; iDevice < _nDeviceIrreg; iDevice++) {
 
 		// Find the 8 neighboring points for all devices and compute the weights for the spatial interpolation
-		int i1 = iDevice * _nFilter3d;
+		long long i1 = iDevice * _nFilter3d;
 		double wz = ( (*_zCoord->_mat)[iDevice] - _oz ) / _dz;
 		double wx = ( (*_xCoord->_mat)[iDevice] - _ox ) / _dx;
     double wy = ( (*_yCoord->_mat)[iDevice] - _oy ) / _dy;
-		int zReg = wz; // z-coordinate on regular grid
+		long long zReg = wz; // z-coordinate on regular grid
 		wz = wz - zReg;
 		wz = 1.0 - wz;
-		int xReg = wx; // x-coordinate on regular grid
+		long long xReg = wx; // x-coordinate on regular grid
 		wx = wx - xReg;
 		wx = 1.0 - wx;
-    int yReg = wy; // y-coordinate on regular grid
+    long long yReg = wy; // y-coordinate on regular grid
     wy = wy - yReg;
     wy = 1.0 - wy;
 
@@ -285,13 +285,13 @@ void spaceInterpGpu_3D::calcLinearWeights(){
 			double wzDipole = ( (*_zCoord->_mat)[iDevice] + _zDipoleShift - _oz ) / _dz;
 			double wxDipole = ( (*_xCoord->_mat)[iDevice] + _xDipoleShift - _ox ) / _dx;
       double wyDipole = ( (*_yCoord->_mat)[iDevice] + _yDipoleShift - _oy ) / _dz;
-			int zRegDipole = wzDipole; // z-coordinate on regular grid
+			long long zRegDipole = wzDipole; // z-coordinate on regular grid
 			wzDipole = wzDipole - zRegDipole;
 			wzDipole = 1.0 - wzDipole;
-			int xRegDipole = wxDipole; // x-coordinate on regular grid
+			long long xRegDipole = wxDipole; // x-coordinate on regular grid
 			wxDipole = wxDipole - xRegDipole;
 			wxDipole = 1.0 - wxDipole;
-      int yRegDipole = wyDipole; // y-coordinate on regular grid
+      long long yRegDipole = wyDipole; // y-coordinate on regular grid
 			wyDipole = wyDipole - yRegDipole;
 			wyDipole = 1.0 - wyDipole;
 
@@ -350,9 +350,9 @@ void spaceInterpGpu_3D::calcLinearWeights(){
 // Compute weights for sinc interpolation
 void spaceInterpGpu_3D::calcSincWeights(){
 
-	for (int iDevice = 0; iDevice < _nDeviceIrreg; iDevice++) {
+	for (long long iDevice = 0; iDevice < _nDeviceIrreg; iDevice++) {
 
-		int i1 = iDevice * _nFilter3d;
+		long long i1 = iDevice * _nFilter3d;
 
 		// Compute position of the acquisition device [km]
 		double zIrreg = (*_zCoord->_mat)[iDevice];
@@ -363,9 +363,9 @@ void spaceInterpGpu_3D::calcSincWeights(){
 		double yReg = (yIrreg - _oy) / _dy;
 
 		// Index of top left grid point closest to the acquisition device
-		int zRegInt = zReg;
-		int xRegInt = xReg;
-		int yRegInt = yReg;
+		long long zRegInt = zReg;
+		long long xRegInt = xReg;
+		long long yRegInt = yReg;
 
 		// Check that none of the points used in the interpolation are out of bounds
 		if ( (yRegInt-_hFilter1d+1 < 0) || (yRegInt+_hFilter1d+1 < _ny) ){
@@ -382,9 +382,9 @@ void spaceInterpGpu_3D::calcSincWeights(){
 		}
 
 		// Loop over grid points involved in the interpolation
-		for (int iy = 0; iy < _nFilter1d; iy++){
-			for (int ix = 0; ix < _nFilter1d; ix++){
-				for (int iz = 0; iz < _nFilter1d; iz++){
+		for (long long iy = 0; iy < _nFilter1d; iy++){
+			for (long long ix = 0; ix < _nFilter1d; ix++){
+				for (long long iz = 0; iz < _nFilter1d; iz++){
 
 					// Compute grid point position
 					double yCur = (yRegInt+iy-_hFilter1d+1) * _dy + _oy;
@@ -397,10 +397,10 @@ void spaceInterpGpu_3D::calcSincWeights(){
 					double wz = (zIrreg-zCur)/_dz;
 
 					// Compute global index of grid point used in the interpolation (on the main FD grid)
-					int iPointInterp = _nz*_nx*(yRegInt+iy-_hFilter1d+1) + _nz*(xRegInt+ix-_hFilter1d+1) + (zRegInt+iz-_hFilter1d+1);
+					long long iPointInterp = _nz*_nx*(yRegInt+iy-_hFilter1d+1) + _nz*(xRegInt+ix-_hFilter1d+1) + (zRegInt+iz-_hFilter1d+1);
 
 					// Compute index in the array that contains the positions of the grid points involved in the interpolation
-					int iGridPointIndex = i1+iy*_nFilter1d*_nFilter1d+ix*_nFilter1d+iz;
+					long long iGridPointIndex = i1+iy*_nFilter1d*_nFilter1d+ix*_nFilter1d+iz;
 
 					// Compute global index
 					_gridPointIndex[iGridPointIndex] = iPointInterp;
@@ -414,7 +414,7 @@ void spaceInterpGpu_3D::calcSincWeights(){
 
 		if (_dipole == 1){
 
-			int i1Dipole = i1 + _nFilter3dDipole;
+			long long i1Dipole = i1 + _nFilter3dDipole;
 
 			// Compute position of the acquisition device [km] for the second pole
 			double zIrregDipole = (*_zCoord->_mat)[iDevice]+_zDipoleShift;
@@ -425,9 +425,9 @@ void spaceInterpGpu_3D::calcSincWeights(){
 			double yRegDipole = (yIrregDipole - _oy) / _dy;
 
 			// Index of top left grid point closest to the acquisition device (corner of the voxel where the device lies that has the smallest index)
-			int zRegDipoleInt = zRegDipole;
-			int xRegDipoleInt = xRegDipole;
-			int yRegDipoleInt = yRegDipole;
+			long long zRegDipoleInt = zRegDipole;
+			long long xRegDipoleInt = xRegDipole;
+			long long yRegDipoleInt = yRegDipole;
 
 			// Check that none of the points used in the interpolation are out of bounds
 			if ( (yRegDipoleInt-_hFilter1d+1 < 0) || (yRegDipoleInt+_hFilter1d+1 < _ny) ){
@@ -444,9 +444,9 @@ void spaceInterpGpu_3D::calcSincWeights(){
 			}
 
 			// Loop over grid points involved in the interpolation
-			for (int iy = 0; iy < _nFilter1d; iy++){
-				for (int ix = 0; ix < _nFilter1d; ix++){
-					for (int iz = 0; iz < _nFilter1d; iz++){
+			for (long long iy = 0; iy < _nFilter1d; iy++){
+				for (long long ix = 0; ix < _nFilter1d; ix++){
+					for (long long iz = 0; iz < _nFilter1d; iz++){
 
 						// Compute grid point position
 						double yCurDipole = (yRegDipoleInt+iy-_hFilter1d+1) * _dy + _oy;
@@ -459,10 +459,10 @@ void spaceInterpGpu_3D::calcSincWeights(){
 						double wzDipole = (zIrregDipole-zCurDipole)/_dz;
 
 						// Compute global index of grid point used in the interpolation (on the main FD grid) for the other pole
-						int iPointInterpDipole = _nz*_nx*(yRegDipoleInt+iy-_hFilter1d+1) + _nz*(xRegDipoleInt+ix-_hFilter1d+1) + (zRegDipoleInt+iz-_hFilter1d+1);
+						long long iPointInterpDipole = _nz*_nx*(yRegDipoleInt+iy-_hFilter1d+1) + _nz*(xRegDipoleInt+ix-_hFilter1d+1) + (zRegDipoleInt+iz-_hFilter1d+1);
 
 						// Compute index in the array that contains the positions of the grid points (non-unique) involved in the interpolation
-						int iGridPointIndexDipole = i1Dipole+iy*_nFilter1d*_nFilter1d+ix*_nFilter1d+iz;
+						long long iGridPointIndexDipole = i1Dipole+iy*_nFilter1d*_nFilter1d+ix*_nFilter1d+iz;
 
 						// Compute global index
 						_gridPointIndex[iGridPointIndexDipole] = iPointInterpDipole;
@@ -483,7 +483,7 @@ void spaceInterpGpu_3D::printRegPosUnique(){
 	std::cout << "Size unique = " << getSizePosUnique() << std::endl;
 	std::cout << "getNDeviceIrreg = " << getNDeviceIrreg() << std::endl;
 	std::cout << "getSizePosUnique = " << getSizePosUnique() << std::endl;
-	for (int iDevice=0; iDevice<getSizePosUnique(); iDevice++){
+	for (long long iDevice=0; iDevice<getSizePosUnique(); iDevice++){
 		std::cout << "Position for device #" << iDevice << " = " << _gridPointIndexUnique[iDevice] << std::endl;
 	}
 }

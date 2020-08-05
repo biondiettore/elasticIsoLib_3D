@@ -9,6 +9,11 @@ void initNonlinearElasticGpu_3D(double dz, double dx, double dy, int nz, int nx,
 void allocateNonlinearElasticGpu_3D(double *rhoxDtw, double *rhoyDtw, double *rhozDtw, double *lamb2MuDt, double *lambDtw, double *muxzDtw, double *muxyDtw, double *muyzDtw, int nx, int ny, int nz, int iGpu, int iGpuId);
 void deallocateNonlinearElasticGpu_3D(int iGpu, int iGpuId);
 
+/*********************************** Nonlinear FWD **************************************/
+
+
+/*********************************** Nonlinear ADJ **************************************/
+
 
 
 

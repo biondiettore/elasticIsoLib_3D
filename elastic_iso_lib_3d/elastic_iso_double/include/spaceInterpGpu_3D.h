@@ -22,8 +22,9 @@ class spaceInterpGpu_3D : public Operator<SEP::double2DReg, SEP::double2DReg> {
 		double _errorTolerance;
 		double *_weight;
 		double _oz, _dz, _ox, _dx, _oy, _dy;
-		int *_gridPointIndex;
-		int _nDeviceIrreg, _nDeviceReg, _nt, _nz, _nx, _ny;
+		long long *_gridPointIndex;
+		long long _nDeviceIrreg, _nDeviceReg;
+		int _nt, _nz, _nx, _ny;
 		int _nzSmall, _nxSmall, _nySmall;
 		int _fat, _zPadMinus, _zPadPlus, _xPadMinus, _xPadPlus, _yPad;
 		int _dipole, _zDipoleShift, _xDipoleShift, _yDipoleShift;
@@ -57,10 +58,10 @@ class spaceInterpGpu_3D : public Operator<SEP::double2DReg, SEP::double2DReg> {
 
 		// Accessors
 		long long *getRegPosUnique(){ return _gridPointIndexUnique.data(); }
-		int *getRegPos(){ return _gridPointIndex; }
+		long long *getRegPos(){ return _gridPointIndex; }
 		int getNt(){ return _nt; }
-		int getNDeviceReg(){ return _nDeviceReg; }
-		int getNDeviceIrreg(){ return _nDeviceIrreg; }
+		long long getNDeviceReg(){ return _nDeviceReg; }
+		long long getNDeviceIrreg(){ return _nDeviceIrreg; }
 		double * getWeights() { return _weight; }
 		int getSizePosUnique(){ return _gridPointIndexUnique.size(); }
 		std::shared_ptr<double1DReg> getZCoord() {return _zCoord;}

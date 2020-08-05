@@ -47,14 +47,6 @@
 	__constant__ double dev_dts_inv; // 1/dts for computing time derivative on device
 	__constant__ double dev_dtw; // dtw
 
-	__constant__ int dev_nSourcesRegCenterGrid; // Nb of source grid points on center grid
-	__constant__ int dev_nSourcesRegXGrid; // Nb of source grid points on x shifted grid
-	__constant__ int dev_nSourcesRegYGrid; // Nb of source grid points on y shifted grid
-	__constant__ int dev_nSourcesRegZGrid; // Nb of source grid points on z shifted grid
-	__constant__ int dev_nSourcesRegXZGrid; // Nb of source grid points on xz shifted grid
-	__constant__ int dev_nSourcesRegXYGrid; // Nb of source grid points on xy shifted grid
-	__constant__ int dev_nSourcesRegYZGrid; // Nb of source grid points on yz shifted grid
-
 	__constant__ double dev_alphaCos; // Decay coefficient
 	__constant__ int dev_minPad; // Minimum padding length
 	__constant__ double dev_cosDampingCoeff[PAD_MAX]; // Padding array

@@ -22,14 +22,14 @@ class seismicElasticOperator3D : public Operator <V1, V2> {
 		std::shared_ptr<spaceInterpGpu_3D> _receiversCenterGrid, _receiversXGrid, _receiversYGrid, _receiversZGrid, _receiversXZGrid, _receiversXYGrid, _receiversYZGrid;
 		long long *_sourcesPositionRegCenterGrid, *_sourcesPositionRegXGrid, *_sourcesPositionRegYGrid, *_sourcesPositionRegZGrid, *_sourcesPositionRegXZGrid, *_sourcesPositionRegXYGrid, *_sourcesPositionRegYZGrid;
 		long long *_receiversPositionRegCenterGrid, *_receiversPositionRegXGrid, *_receiversPositionRegYGrid, *_receiversPositionRegZGrid, *_receiversPositionRegXZGrid, *_receiversPositionRegXYGrid, *_receiversPositionRegYZGrid;
-		int _nSourcesRegCenterGrid,_nSourcesRegXGrid,_nSourcesRegYGrid,_nSourcesRegZGrid,_nSourcesRegXZGrid,_nSourcesRegXYGrid,_nSourcesRegYZGrid;
-		int _nSourcesIrregCenterGrid,_nSourcesIrregXGrid,_nSourcesIrregYGrid,_nSourcesIrregZGrid,_nSourcesIrregXZGrid,_nSourcesIrregXYGrid,_nSourcesIrregYZGrid;
-		int _nReceiversRegCenterGrid,_nReceiversRegXGrid,_nReceiversRegYGrid,_nReceiversRegZGrid,_nReceiversRegXZGrid,_nReceiversRegXYGrid,_nReceiversRegYZGrid;
-		int _nReceiversIrregCenterGrid,_nReceiversIrregXGrid,_nReceiversIrregYGrid,_nReceiversIrregZGrid,_nReceiversIrregXZGrid,_nReceiversIrregXYGrid,_nReceiversIrregYZGrid;
+		long long _nSourcesRegCenterGrid,_nSourcesRegXGrid,_nSourcesRegYGrid,_nSourcesRegZGrid,_nSourcesRegXZGrid,_nSourcesRegXYGrid,_nSourcesRegYZGrid;
+		long long _nSourcesIrregCenterGrid,_nSourcesIrregXGrid,_nSourcesIrregYGrid,_nSourcesIrregZGrid,_nSourcesIrregXZGrid,_nSourcesIrregXYGrid,_nSourcesIrregYZGrid;
+		long long _nReceiversRegCenterGrid,_nReceiversRegXGrid,_nReceiversRegYGrid,_nReceiversRegZGrid,_nReceiversRegXZGrid,_nReceiversRegXYGrid,_nReceiversRegYZGrid;
+		long long _nReceiversIrregCenterGrid,_nReceiversIrregXGrid,_nReceiversIrregYGrid,_nReceiversIrregZGrid,_nReceiversIrregXZGrid,_nReceiversIrregXYGrid,_nReceiversIrregYZGrid;
 		int _nts;
 		int _saveWavefield,_useStreams;
 		int _iGpu, _nGpu, _iGpuId;
-		int _domDec;
+		int _domDec, _freeSurface;
 
     //these variables hold all five components of elastic source signal. Should be a 3d reg
 		std::shared_ptr<V2> _sourcesSignals;

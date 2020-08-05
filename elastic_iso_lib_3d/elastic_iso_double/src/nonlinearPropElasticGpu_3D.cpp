@@ -12,6 +12,7 @@ nonlinearPropElasticGpu_3D::nonlinearPropElasticGpu_3D(std::shared_ptr<fdParamEl
 	_saveWavefield = par->getInt("saveWavefield", 0);
 	_useStreams = par->getInt("useStreams", 0); //Flag whether to use streams to save the wavefield
 	_domDec = par->getInt("domDec", 0); //Flag to use domain decomposition or not
+	_freeSurface = par->getInt("freeSurface", 0); //Flag to use free surface boundary condition or not
 
 	// Initialize GPU
 	initNonlinearElasticGpu_3D(_fdParamElastic->_dz, _fdParamElastic->_dx, _fdParamElastic->_dy, _fdParamElastic->_nz, _fdParamElastic->_nx, _fdParamElastic->_ny, _fdParamElastic->_nts, _fdParamElastic->_dts, _fdParamElastic->_sub, _fdParamElastic->_minPad, _fdParamElastic->_blockSize, _fdParamElastic->_alphaCos, _nGpu, _iGpuId, iGpuAlloc);
@@ -249,6 +250,11 @@ void nonlinearPropElasticGpu_3D::forward(const bool add, const std::shared_ptr<d
 	modelRegDts_sigmayz->scale(area_scale);
 
 	/* Propagate */
+	if (_domDec == 0){
+		throw std::runtime_error("");
+	} else {
+		throw std::runtime_error("");
+	}
 
 	/* Interpolate to irregular grid */
 	_receiversXGrid->forward(true, dataRegDts_vx, dataIrreg_vx);
