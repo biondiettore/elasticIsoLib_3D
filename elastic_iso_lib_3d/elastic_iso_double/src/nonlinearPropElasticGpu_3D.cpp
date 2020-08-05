@@ -11,12 +11,13 @@ nonlinearPropElasticGpu_3D::nonlinearPropElasticGpu_3D(std::shared_ptr<fdParamEl
 	_iGpuId = iGpuId;
 	_saveWavefield = par->getInt("saveWavefield", 0);
 	_useStreams = par->getInt("useStreams", 0); //Flag whether to use streams to save the wavefield
+	_domDec = par->getInt("domDec", 0); //Flag to use domain decomposition or not
 
 	// Initialize GPU
-	// initNonlinearElasticGpu(_fdParamElastic->_dz, _fdParamElastic->_dx, _fdParamElastic->_nz, _fdParamElastic->_nx, _fdParamElastic->_nts, _fdParamElastic->_dts, _fdParamElastic->_sub, _fdParamElastic->_minPad, _fdParamElastic->_blockSize, _fdParamElastic->_alphaCos, _nGpu, _iGpuId, iGpuAlloc);
+	initNonlinearElasticGpu_3D(_fdParamElastic->_dz, _fdParamElastic->_dx, _fdParamElastic->_dy, _fdParamElastic->_nz, _fdParamElastic->_nx, _fdParamElastic->_ny, _fdParamElastic->_nts, _fdParamElastic->_dts, _fdParamElastic->_sub, _fdParamElastic->_minPad, _fdParamElastic->_blockSize, _fdParamElastic->_alphaCos, _nGpu, _iGpuId, iGpuAlloc);
 
 	/// Alocate on GPUs
-	// allocateNonlinearElasticGpu(_fdParamElastic->_rhoxDtw, _fdParamElastic->_rhozDtw, _fdParamElastic->_lamb2MuDtw, _fdParamElastic->_lambDtw, _fdParamElastic->_muxzDtw, _iGpu, iGpuId);
+	allocateNonlinearElasticGpu_3D(_fdParamElastic->_rhoxDtw, _fdParamElastic->_rhoyDtw, _fdParamElastic->_rhozDtw, _fdParamElastic->_lamb2MuDtw, _fdParamElastic->_lambDtw, _fdParamElastic->_muxzDtw, _fdParamElastic->_muxyDtw, _fdParamElastic->_muyzDtw, _fdParamElastic->_nx, _fdParamElastic->_ny, _fdParamElastic->_nz, _iGpu, iGpuId);
 	setAllWavefields_3D(0); // By default, do not record the scattered wavefields
 }
 
@@ -169,8 +170,83 @@ void nonlinearPropElasticGpu_3D::forward(const bool add, const std::shared_ptr<d
 	_sourcesYZGrid->adjoint(false, modelRegDts_sigmayz, modelIrreg_sigmayz);
 
 	/* Scale source signals model */
+	// fx
+	#pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegXGrid; is++){ //loop over number of reg sources x grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+	  		(*modelRegDts_vx->_mat)[is][it] *= _fdParamElastic->_rhoxDtw[(_sourcesXGrid->getRegPosUnique())[is]];
+		}
+  }
+	// fy
+	#pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegYGrid; is++){ //loop over number of reg sources y grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+	  		(*modelRegDts_vy->_mat)[is][it] *= _fdParamElastic->_rhoxDtw[(_sourcesYGrid->getRegPosUnique())[is]];
+		}
+  }
+	// fz
+  #pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegZGrid; is++){ //loop over number of reg sources z grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+	  		(*modelRegDts_vz->_mat)[is][it] *= _fdParamElastic->_rhozDtw[(_sourcesZGrid->getRegPosUnique())[is]];
+		}
+  }
+	// moment tensor components
+	#pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegCenterGrid; is++){ //loop over number of reg sources xz grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+			double mxx = 0;
+			double myy = 0;
+			double mzz = 0;
+			// mxx
+	  	mxx = (*modelRegDts_sigmaxx->_mat)[is][it] * _fdParamElastic->_lamb2MuDtw[(_sourcesCenterGrid->getRegPosUnique())[is]]+
+								((*modelRegDts_sigmayy->_mat)[is][it] + (*modelRegDts_sigmazz->_mat)[is][it] ) * _fdParamElastic->_lambDtw[(_sourcesCenterGrid->getRegPosUnique())[is]];
+			// myy
+			myy = (*modelRegDts_sigmayy->_mat)[is][it] * _fdParamElastic->_lamb2MuDtw[(_sourcesCenterGrid->getRegPosUnique())[is]]+
+								((*modelRegDts_sigmaxx->_mat)[is][it] + (*modelRegDts_sigmazz->_mat)[is][it] ) * _fdParamElastic->_lambDtw[(_sourcesCenterGrid->getRegPosUnique())[is]];
+			// mzz
+			mzz = (*modelRegDts_sigmazz->_mat)[is][it] * _fdParamElastic->_lamb2MuDtw[(_sourcesCenterGrid->getRegPosUnique())[is]]+
+								((*modelRegDts_sigmaxx->_mat)[is][it] + (*modelRegDts_sigmayy->_mat)[is][it] ) * _fdParamElastic->_lambDtw[(_sourcesCenterGrid->getRegPosUnique())[is]];
+		  // Setting values
+			(*modelRegDts_sigmaxx->_mat)[is][it] = mxx;
+			(*modelRegDts_sigmayy->_mat)[is][it] = myy;
+			(*modelRegDts_sigmazz->_mat)[is][it] = mzz;
+		}
+  }
+	// mxz
+	#pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegXZGrid; is++){ //loop over number of reg sources xz grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+	  		(*modelRegDts_sigmaxz->_mat)[is][it] *= _fdParamElastic->_muxzDtw[(_sourcesXZGrid->getRegPosUnique())[is]];
+		}
+  }
+	// mxy
+	#pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegXYGrid; is++){ //loop over number of reg sources xz grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+	  		(*modelRegDts_sigmaxy->_mat)[is][it] *= _fdParamElastic->_muxyDtw[(_sourcesYZGrid->getRegPosUnique())[is]];
+		}
+  }
+	// myz
+	#pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegYZGrid; is++){ //loop over number of reg sources yz grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+	  		(*modelRegDts_sigmayz->_mat)[is][it] *= _fdParamElastic->_muyzDtw[(_sourcesYZGrid->getRegPosUnique())[is]];
+		}
+  }
+
 
 	/*Scaling by the inverse of the space discretization*/
+	double area_scale = 1.0/(_fdParamElastic->_dx * _fdParamElastic->_dy * _fdParamElastic->_dz);
+	modelRegDts_vx->scale(area_scale);
+	modelRegDts_vy->scale(area_scale);
+  modelRegDts_vz->scale(area_scale);
+  modelRegDts_sigmaxx->scale(area_scale);
+	modelRegDts_sigmayy->scale(area_scale);
+  modelRegDts_sigmazz->scale(area_scale);
+  modelRegDts_sigmaxz->scale(area_scale);
+	modelRegDts_sigmaxy->scale(area_scale);
+	modelRegDts_sigmayz->scale(area_scale);
 
 	/* Propagate */
 

@@ -40,14 +40,37 @@
 	__constant__ int dev_nx; // nx on Device
 	__constant__ int dev_ny; // ny on Device
 	__constant__ int dev_nz; // nz on Device
-	__constant__ long long dev_yStride; // nz * nx on Device
-	__constant__ unsigned long long dev_nModel; // nz * nx * ny on Device
 
 	__constant__ int dev_nts; // Number of time steps at the coarse time sampling on Device
 	__constant__ int dev_ntw; // Number of time steps at the fine time sampling on Device
 	__constant__ int dev_sub; // Subsampling in time
 	__constant__ double dev_dts_inv; // 1/dts for computing time derivative on device
 	__constant__ double dev_dtw; // dtw
+
+	__constant__ int dev_nSourcesRegCenterGrid; // Nb of source grid points on center grid
+	__constant__ int dev_nSourcesRegXGrid; // Nb of source grid points on x shifted grid
+	__constant__ int dev_nSourcesRegYGrid; // Nb of source grid points on y shifted grid
+	__constant__ int dev_nSourcesRegZGrid; // Nb of source grid points on z shifted grid
+	__constant__ int dev_nSourcesRegXZGrid; // Nb of source grid points on xz shifted grid
+	__constant__ int dev_nSourcesRegXYGrid; // Nb of source grid points on xy shifted grid
+	__constant__ int dev_nSourcesRegYZGrid; // Nb of source grid points on yz shifted grid
+
+	__constant__ double dev_alphaCos; // Decay coefficient
+	__constant__ int dev_minPad; // Minimum padding length
+	__constant__ double dev_cosDampingCoeff[PAD_MAX]; // Padding array
+
+
+	// Global memory variables
+	long long **dev_sourcesPositionRegCenterGrid, **dev_sourcesPositionRegXGrid, **dev_sourcesPositionRegYGrid, **dev_sourcesPositionRegZGrid, **dev_sourcesPositionRegXZGrid, **dev_sourcesPositionRegXYGrid, **dev_sourcesPositionRegYZGrid; // Array containing the positions of the sources on the regular grid
+	long long **dev_receiversPositionRegCenterGrid, **dev_receiversPositionRegXGrid, **dev_receiversPositionRegYGrid, **dev_receiversPositionRegZGrid, **dev_receiversPositionRegXZGrid, **dev_receiversPositionRegXYGrid, **dev_receiversPositionRegYZGrid; // Array containing the positions of the receivers on the regular grid
+	double **dev_p0_vx, **dev_p0_vy, **dev_p0_vz, **dev_p0_sigmaxx, **dev_p0_sigmayy, **dev_p0_sigmazz, **dev_p0_sigmaxz, **dev_p0_sigmaxy, **dev_p0_sigmayz; // Temporary slices for stepping
+	double **dev_p1_vx, **dev_p1_vy, **dev_p1_vz, **dev_p1_sigmaxx, **dev_p1_sigmayy, **dev_p1_sigmazz, **dev_p1_sigmaxz, **dev_p1_sigmaxy, **dev_p1_sigmayz; // Temporary slices for stepping
+	double **dev_temp1; // Temporary slices for stepping
+
+	double **dev_modelRegDts_vx, **dev_modelRegDts_vy, **dev_modelRegDts_vz, **dev_modelRegDts_sigmaxx, **dev_modelRegDts_sigmayy, **dev_modelRegDts_sigmazz, **dev_modelRegDts_sigmaxz, **dev_modelRegDts_sigmaxy, **dev_modelRegDts_sigmayz; // Model for nonlinear propagation (wavelet)
+	double **dev_dataRegDts_vx, **dev_dataRegDts_vy, **dev_dataRegDts_vz, **dev_dataRegDts_sigmaxx, **dev_dataRegDts_sigmayy, **dev_dataRegDts_sigmazz, **dev_dataRegDts_sigmaxz, **dev_dataRegDts_sigmaxy, **dev_dataRegDts_sigmayz; // Data on device at coarse time-sampling (converted to regular grid)
+
+	double **dev_rhoxDtw, **dev_rhoyDtw, **dev_rhozDtw, **dev_lamb2MuDtw, **dev_lambDtw, **dev_muxzDtw, **dev_muxyDtw, **dev_muyzDtw; // Precomputed scaled properties
 
 	/************************************* HOST DECLARATION *********************************/
 	long long host_nx; // Includes padding + FAT

@@ -29,6 +29,7 @@ class seismicElasticOperator3D : public Operator <V1, V2> {
 		int _nts;
 		int _saveWavefield,_useStreams;
 		int _iGpu, _nGpu, _iGpuId;
+		int _domDec;
 
     //these variables hold all five components of elastic source signal. Should be a 3d reg
 		std::shared_ptr<V2> _sourcesSignals;
