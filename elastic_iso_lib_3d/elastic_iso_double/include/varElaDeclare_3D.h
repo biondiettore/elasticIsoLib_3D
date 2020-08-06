@@ -37,10 +37,6 @@
 	__constant__ int dev_hTimeInterpFilter; // Time interpolation filter half-length
 	__constant__ double dev_timeInterpFilter[2*(SUB_MAX+1)]; // Time interpolation filter stored in constant memory
 
-	__constant__ int dev_nx; // nx on Device
-	__constant__ int dev_ny; // ny on Device
-	__constant__ int dev_nz; // nz on Device
-
 	__constant__ int dev_nts; // Number of time steps at the coarse time sampling on Device
 	__constant__ int dev_ntw; // Number of time steps at the fine time sampling on Device
 	__constant__ int dev_sub; // Subsampling in time

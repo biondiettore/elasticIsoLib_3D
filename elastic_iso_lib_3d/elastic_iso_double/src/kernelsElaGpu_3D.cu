@@ -281,7 +281,7 @@ __global__ void ker_record_interp_data_yzGrid_3D(double *dev_newTimeSlice_sigmay
 /******************************* Forward stepper ******************************/
 /******************************************************************************/
 /* Forward stepper (no damping) */
-__global__ void stepFwdGpu_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_vz, double *dev_o_sigmaxx, double *dev_o_sigmayy, double *dev_o_sigmazz, double *dev_o_sigmaxy, double *dev_o_sigmaxz, double *dev_o_sigmayz, double *dev_c_vx, double *dev_c_vy, double *dev_c_vz, double *dev_c_sigmaxx, double *dev_c_sigmayy, double *dev_c_sigmazz, double *dev_c_sigmaxy, double *dev_c_sigmaxz, double *dev_c_sigmayz, double *dev_n_vx, double *dev_n_vy, double *dev_n_vz, double *dev_n_sigmaxx, double *dev_n_sigmayy, double *dev_n_sigmazz, double *dev_n_sigmaxy, double *dev_n_sigmaxz, double *dev_n_sigmayz, double* dev_rhoxDtw, double* dev_rhoyDtw, double* dev_rhozDtw, double* dev_lamb2MuDtw, double* dev_lambDtw, double* dev_muxzDtw, double* dev_muxyDtw, double* dev_muyzDtw){
+__global__ void stepFwdGpu_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_vz, double *dev_o_sigmaxx, double *dev_o_sigmayy, double *dev_o_sigmazz, double *dev_o_sigmaxy, double *dev_o_sigmaxz, double *dev_o_sigmayz, double *dev_c_vx, double *dev_c_vy, double *dev_c_vz, double *dev_c_sigmaxx, double *dev_c_sigmayy, double *dev_c_sigmazz, double *dev_c_sigmaxy, double *dev_c_sigmaxz, double *dev_c_sigmayz, double *dev_n_vx, double *dev_n_vy, double *dev_n_vz, double *dev_n_sigmaxx, double *dev_n_sigmayy, double *dev_n_sigmazz, double *dev_n_sigmaxy, double *dev_n_sigmaxz, double *dev_n_sigmayz, double* dev_rhoxDtw, double* dev_rhoyDtw, double* dev_rhozDtw, double* dev_lamb2MuDtw, double* dev_lambDtw, double* dev_muxzDtw, double* dev_muxyDtw, double* dev_muyzDtw, int nx, int ny, int nz){
 
 	// Allocate shared memory for a specific block
 	__shared__ double shared_c_vx[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vx wavefield y-slice block
@@ -311,11 +311,11 @@ __global__ void stepFwdGpu_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_
 	double dev_c_sigmayz_y[2*FAT-1];
 
 	// Number of elements in one y-slice
-	long long yStride = dev_nz * dev_nx;
+	long long yStride = nz * nx;
 
 	// Global index of the first element at which we are going to compute the Laplacian
 	// Skip the first FAT elements on the y-axis
-	long long iGlobal = FAT * yStride + dev_nz * ixGlobal + izGlobal;
+	long long iGlobal = FAT * yStride + nz * ixGlobal + izGlobal;
 
 	// Global index of the element with the smallest y-position needed to compute derivatives at iGlobal
 	long long iGlobalTemp = iGlobal - FAT * yStride;
@@ -380,7 +380,7 @@ __global__ void stepFwdGpu_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_
 	dev_c_sigmayz_y[6] = dev_c_sigmayz[iGlobalTemp+=yStride]; // At that point, iyTemp = 2*FAT-1 // iy = 6
 
 	// Loop over y
-	for (long long iy=FAT; iy<dev_ny-FAT; iy++){
+	for (long long iy=FAT; iy<ny-FAT; iy++){
 		// Update Vx values along the y-axis
 		dev_c_vx_y[0] = dev_c_vx_y[1];
 		dev_c_vx_y[1] = dev_c_vx_y[2];
@@ -445,25 +445,25 @@ __global__ void stepFwdGpu_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_
 		// Load the halos in the x-direction
 		// Threads with x-index ranging from 0,...,FAT will load the first and last FAT elements of the block on the x-axis to shared memory
 		if (threadIdx.y < FAT) {
-			shared_c_vx[threadIdx.y][izLocal] = dev_c_vx[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_vy[threadIdx.y][izLocal] = dev_c_vy[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_vz[threadIdx.y][izLocal] = dev_c_vz[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_sigmaxx[threadIdx.y][izLocal] = dev_c_sigmaxx[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_sigmayy[threadIdx.y][izLocal] = dev_c_sigmayy[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_sigmazz[threadIdx.y][izLocal] = dev_c_sigmazz[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_sigmaxz[threadIdx.y][izLocal] = dev_c_sigmaxz[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_sigmaxy[threadIdx.y][izLocal] = dev_c_sigmaxy[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_sigmayz[threadIdx.y][izLocal] = dev_c_sigmayz[iGlobal-dev_nz*FAT]; // Left side
+			shared_c_vx[threadIdx.y][izLocal] = dev_c_vx[iGlobal-nz*FAT]; // Left side
+			shared_c_vy[threadIdx.y][izLocal] = dev_c_vy[iGlobal-nz*FAT]; // Left side
+			shared_c_vz[threadIdx.y][izLocal] = dev_c_vz[iGlobal-nz*FAT]; // Left side
+			shared_c_sigmaxx[threadIdx.y][izLocal] = dev_c_sigmaxx[iGlobal-nz*FAT]; // Left side
+			shared_c_sigmayy[threadIdx.y][izLocal] = dev_c_sigmayy[iGlobal-nz*FAT]; // Left side
+			shared_c_sigmazz[threadIdx.y][izLocal] = dev_c_sigmazz[iGlobal-nz*FAT]; // Left side
+			shared_c_sigmaxz[threadIdx.y][izLocal] = dev_c_sigmaxz[iGlobal-nz*FAT]; // Left side
+			shared_c_sigmaxy[threadIdx.y][izLocal] = dev_c_sigmaxy[iGlobal-nz*FAT]; // Left side
+			shared_c_sigmayz[threadIdx.y][izLocal] = dev_c_sigmayz[iGlobal-nz*FAT]; // Left side
 
-			shared_c_vx[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vx[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_vy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vy[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_vz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vz[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_sigmaxx[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmaxx[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_sigmayy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmayy[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_sigmazz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmazz[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_sigmaxz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmaxz[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_sigmaxy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmaxy[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_sigmayz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmayz[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
+			shared_c_vx[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vx[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_vy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vy[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_vz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vz[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_sigmaxx[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmaxx[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_sigmayy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmayy[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_sigmazz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmazz[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_sigmaxz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmaxz[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_sigmaxy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmaxy[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_sigmayz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmayz[iGlobal+nz*BLOCK_SIZE_X]; // Right side
 		}
 
 		// Load the halos in the z-direction
@@ -629,7 +629,7 @@ __global__ void stepFwdGpu_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_
 }
 
 /* Forward stepper for updating particle-velocity fields (no damping) */
-__global__ void stepFwdGpu_vel_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_vz, double *dev_o_sigmaxx, double *dev_o_sigmayy, double *dev_o_sigmazz, double *dev_o_sigmaxy, double *dev_o_sigmaxz, double *dev_o_sigmayz, double *dev_c_vx, double *dev_c_vy, double *dev_c_vz, double *dev_c_sigmaxx, double *dev_c_sigmayy, double *dev_c_sigmazz, double *dev_c_sigmaxy, double *dev_c_sigmaxz, double *dev_c_sigmayz, double *dev_n_vx, double *dev_n_vy, double *dev_n_vz, double *dev_n_sigmaxx, double *dev_n_sigmayy, double *dev_n_sigmazz, double *dev_n_sigmaxy, double *dev_n_sigmaxz, double *dev_n_sigmayz, double* dev_rhoxDtw, double* dev_rhoyDtw, double* dev_rhozDtw, double* dev_lamb2MuDtw, double* dev_lambDtw, double* dev_muxzDtw, double* dev_muxyDtw, double* dev_muyzDtw){
+__global__ void stepFwdGpu_vel_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_vz, double *dev_o_sigmaxx, double *dev_o_sigmayy, double *dev_o_sigmazz, double *dev_o_sigmaxy, double *dev_o_sigmaxz, double *dev_o_sigmayz, double *dev_c_vx, double *dev_c_vy, double *dev_c_vz, double *dev_c_sigmaxx, double *dev_c_sigmayy, double *dev_c_sigmazz, double *dev_c_sigmaxy, double *dev_c_sigmaxz, double *dev_c_sigmayz, double *dev_n_vx, double *dev_n_vy, double *dev_n_vz, double *dev_n_sigmaxx, double *dev_n_sigmayy, double *dev_n_sigmazz, double *dev_n_sigmaxy, double *dev_n_sigmaxz, double *dev_n_sigmayz, double* dev_rhoxDtw, double* dev_rhoyDtw, double* dev_rhozDtw, double* dev_lamb2MuDtw, double* dev_lambDtw, double* dev_muxzDtw, double* dev_muxyDtw, double* dev_muyzDtw, int nx, int ny, int nz){
 
 	// Allocate shared memory for a specific block
 	__shared__ double shared_c_sigmaxx[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Sigmaxx wavefield y-slice block
@@ -653,11 +653,11 @@ __global__ void stepFwdGpu_vel_3D(double *dev_o_vx, double *dev_o_vy, double *de
 	double dev_c_sigmayz_y[2*FAT-1];
 
 	// Number of elements in one y-slice
-	long long yStride = dev_nz * dev_nx;
+	long long yStride = nz * nx;
 
 	// Global index of the first element at which we are going to compute the Laplacian
 	// Skip the first FAT elements on the y-axis
-	long long iGlobal = FAT * yStride + dev_nz * ixGlobal + izGlobal;
+	long long iGlobal = FAT * yStride + nz * ixGlobal + izGlobal;
 
 	// Global index of the element with the smallest y-position needed to compute derivatives at iGlobal
 	long long iGlobalTemp = iGlobal - FAT * yStride;
@@ -692,7 +692,7 @@ __global__ void stepFwdGpu_vel_3D(double *dev_o_vx, double *dev_o_vy, double *de
 	dev_c_sigmayz_y[6] = dev_c_sigmayz[iGlobalTemp+=yStride]; // At that point, iyTemp = 2*FAT-1 // iy = 6
 
 	// Loop over y
-	for (long long iy=FAT; iy<dev_ny-FAT; iy++){
+	for (long long iy=FAT; iy<ny-FAT; iy++){
 
 		// Update Sigmaxy values along the y-axis
 		dev_c_sigmaxy_y[0] = dev_c_sigmaxy_y[1];
@@ -728,19 +728,19 @@ __global__ void stepFwdGpu_vel_3D(double *dev_o_vx, double *dev_o_vy, double *de
 		// Load the halos in the x-direction
 		// Threads with x-index ranging from 0,...,FAT will load the first and last FAT elements of the block on the x-axis to shared memory
 		if (threadIdx.y < FAT) {
-			shared_c_sigmaxx[threadIdx.y][izLocal] = dev_c_sigmaxx[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_sigmayy[threadIdx.y][izLocal] = dev_c_sigmayy[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_sigmazz[threadIdx.y][izLocal] = dev_c_sigmazz[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_sigmaxz[threadIdx.y][izLocal] = dev_c_sigmaxz[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_sigmaxy[threadIdx.y][izLocal] = dev_c_sigmaxy[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_sigmayz[threadIdx.y][izLocal] = dev_c_sigmayz[iGlobal-dev_nz*FAT]; // Left side
+			shared_c_sigmaxx[threadIdx.y][izLocal] = dev_c_sigmaxx[iGlobal-nz*FAT]; // Left side
+			shared_c_sigmayy[threadIdx.y][izLocal] = dev_c_sigmayy[iGlobal-nz*FAT]; // Left side
+			shared_c_sigmazz[threadIdx.y][izLocal] = dev_c_sigmazz[iGlobal-nz*FAT]; // Left side
+			shared_c_sigmaxz[threadIdx.y][izLocal] = dev_c_sigmaxz[iGlobal-nz*FAT]; // Left side
+			shared_c_sigmaxy[threadIdx.y][izLocal] = dev_c_sigmaxy[iGlobal-nz*FAT]; // Left side
+			shared_c_sigmayz[threadIdx.y][izLocal] = dev_c_sigmayz[iGlobal-nz*FAT]; // Left side
 
-			shared_c_sigmaxx[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmaxx[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_sigmayy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmayy[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_sigmazz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmazz[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_sigmaxz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmaxz[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_sigmaxy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmaxy[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_sigmayz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmayz[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
+			shared_c_sigmaxx[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmaxx[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_sigmayy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmayy[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_sigmazz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmazz[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_sigmaxz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmaxz[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_sigmaxy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmaxy[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_sigmayz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_sigmayz[iGlobal+nz*BLOCK_SIZE_X]; // Right side
 		}
 
 		// Load the halos in the z-direction
@@ -828,7 +828,7 @@ __global__ void stepFwdGpu_vel_3D(double *dev_o_vx, double *dev_o_vy, double *de
 }
 
 /* Forward stepper for updating stress fields (no damping) */
-__global__ void stepFwdGpu_stress_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_vz, double *dev_o_sigmaxx, double *dev_o_sigmayy, double *dev_o_sigmazz, double *dev_o_sigmaxy, double *dev_o_sigmaxz, double *dev_o_sigmayz, double *dev_c_vx, double *dev_c_vy, double *dev_c_vz, double *dev_c_sigmaxx, double *dev_c_sigmayy, double *dev_c_sigmazz, double *dev_c_sigmaxy, double *dev_c_sigmaxz, double *dev_c_sigmayz, double *dev_n_vx, double *dev_n_vy, double *dev_n_vz, double *dev_n_sigmaxx, double *dev_n_sigmayy, double *dev_n_sigmazz, double *dev_n_sigmaxy, double *dev_n_sigmaxz, double *dev_n_sigmayz, double* dev_rhoxDtw, double* dev_rhoyDtw, double* dev_rhozDtw, double* dev_lamb2MuDtw, double* dev_lambDtw, double* dev_muxzDtw, double* dev_muxyDtw, double* dev_muyzDtw){
+__global__ void stepFwdGpu_stress_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_vz, double *dev_o_sigmaxx, double *dev_o_sigmayy, double *dev_o_sigmazz, double *dev_o_sigmaxy, double *dev_o_sigmaxz, double *dev_o_sigmayz, double *dev_c_vx, double *dev_c_vy, double *dev_c_vz, double *dev_c_sigmaxx, double *dev_c_sigmayy, double *dev_c_sigmazz, double *dev_c_sigmaxy, double *dev_c_sigmaxz, double *dev_c_sigmayz, double *dev_n_vx, double *dev_n_vy, double *dev_n_vz, double *dev_n_sigmaxx, double *dev_n_sigmayy, double *dev_n_sigmazz, double *dev_n_sigmaxy, double *dev_n_sigmaxz, double *dev_n_sigmayz, double* dev_rhoxDtw, double* dev_rhoyDtw, double* dev_rhozDtw, double* dev_lamb2MuDtw, double* dev_lambDtw, double* dev_muxzDtw, double* dev_muxyDtw, double* dev_muyzDtw, int nx, int ny, int nz){
 
 	// Allocate shared memory for a specific block
 	__shared__ double shared_c_vx[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vx wavefield y-slice block
@@ -849,11 +849,11 @@ __global__ void stepFwdGpu_stress_3D(double *dev_o_vx, double *dev_o_vy, double 
 	double dev_c_vz_y[2*FAT-1];
 
 	// Number of elements in one y-slice
-	long long yStride = dev_nz * dev_nx;
+	long long yStride = nz * nx;
 
 	// Global index of the first element at which we are going to compute the Laplacian
 	// Skip the first FAT elements on the y-axis
-	long long iGlobal = FAT * yStride + dev_nz * ixGlobal + izGlobal;
+	long long iGlobal = FAT * yStride + nz * ixGlobal + izGlobal;
 
 	// Global index of the element with the smallest y-position needed to compute derivatives at iGlobal
 	long long iGlobalTemp = iGlobal - FAT * yStride;
@@ -888,7 +888,7 @@ __global__ void stepFwdGpu_stress_3D(double *dev_o_vx, double *dev_o_vy, double 
 	dev_c_vz_y[6] = dev_c_vz[iGlobalTemp+=yStride]; // iy = 6
 
 	// Loop over y
-	for (long long iy=FAT; iy<dev_ny-FAT; iy++){
+	for (long long iy=FAT; iy<ny-FAT; iy++){
 		// Update Vx values along the y-axis
 		dev_c_vx_y[0] = dev_c_vx_y[1];
 		dev_c_vx_y[1] = dev_c_vx_y[2];
@@ -924,13 +924,13 @@ __global__ void stepFwdGpu_stress_3D(double *dev_o_vx, double *dev_o_vy, double 
 		// Load the halos in the x-direction
 		// Threads with x-index ranging from 0,...,FAT will load the first and last FAT elements of the block on the x-axis to shared memory
 		if (threadIdx.y < FAT) {
-			shared_c_vx[threadIdx.y][izLocal] = dev_c_vx[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_vy[threadIdx.y][izLocal] = dev_c_vy[iGlobal-dev_nz*FAT]; // Left side
-			shared_c_vz[threadIdx.y][izLocal] = dev_c_vz[iGlobal-dev_nz*FAT]; // Left side
+			shared_c_vx[threadIdx.y][izLocal] = dev_c_vx[iGlobal-nz*FAT]; // Left side
+			shared_c_vy[threadIdx.y][izLocal] = dev_c_vy[iGlobal-nz*FAT]; // Left side
+			shared_c_vz[threadIdx.y][izLocal] = dev_c_vz[iGlobal-nz*FAT]; // Left side
 
-			shared_c_vx[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vx[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_vy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vy[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
-			shared_c_vz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vz[iGlobal+dev_nz*BLOCK_SIZE_X]; // Right side
+			shared_c_vx[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vx[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_vy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vy[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_vz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vz[iGlobal+nz*BLOCK_SIZE_X]; // Right side
 		}
 
 		// Load the halos in the z-direction
@@ -1030,23 +1030,23 @@ __global__ void stepFwdGpu_stress_3D(double *dev_o_vx, double *dev_o_vy, double 
 /******************************************************************************/
 /************************************** Damping *******************************/
 /******************************************************************************/
-__global__ void dampCosineEdge_3D(double *dev_p1_vx, double *dev_p2_vx, double *dev_p1_vy, double *dev_p2_vy, double *dev_p1_vz, double *dev_p2_vz, double *dev_p1_sigmaxx, double *dev_p2_sigmaxx, double *dev_p1_sigmayy, double *dev_p2_sigmayy, double *dev_p1_sigmazz, double *dev_p2_sigmazz, double *dev_p1_sigmaxz, double *dev_p2_sigmaxz, double *dev_p1_sigmaxy, double *dev_p2_sigmaxy, double *dev_p1_sigmayz, double *dev_p2_sigmayz) {
+__global__ void dampCosineEdge_3D(double *dev_p1_vx, double *dev_p2_vx, double *dev_p1_vy, double *dev_p2_vy, double *dev_p1_vz, double *dev_p2_vz, double *dev_p1_sigmaxx, double *dev_p2_sigmaxx, double *dev_p1_sigmayy, double *dev_p2_sigmayy, double *dev_p1_sigmazz, double *dev_p2_sigmazz, double *dev_p1_sigmaxz, double *dev_p2_sigmaxz, double *dev_p1_sigmaxy, double *dev_p2_sigmaxy, double *dev_p1_sigmayz, double *dev_p2_sigmayz, int nx, int ny, int nz) {
 
 	long long izGlobal = FAT + blockIdx.x * BLOCK_SIZE_Z + threadIdx.x; // Global z-coordinate on the z-axis
 	long long ixGlobal = FAT + blockIdx.y * BLOCK_SIZE_X + threadIdx.y; // Global x-coordinate on the x-axis
-  long long yStride = dev_nz * dev_nx;
+  long long yStride = nz * nx;
 
-	for (long long iyGlobal=FAT; iyGlobal<dev_ny-FAT; iyGlobal++){
+	for (long long iyGlobal=FAT; iyGlobal<ny-FAT; iyGlobal++){
 
 		// Compute distance to the closest edge of model (not including the fat)
 		// For example, the first non fat element will have a distance of 0
-		long long distToEdge = min4(izGlobal-FAT, ixGlobal-FAT, dev_nz-izGlobal-1-FAT, dev_nx-ixGlobal-1-FAT);
-		distToEdge = min2(distToEdge,min2(iyGlobal-FAT,dev_ny-iyGlobal-1-FAT));
+		long long distToEdge = min4(izGlobal-FAT, ixGlobal-FAT, nz-izGlobal-1-FAT, nx-ixGlobal-1-FAT);
+		distToEdge = min2(distToEdge,min2(iyGlobal-FAT,ny-iyGlobal-1-FAT));
 
 		if (distToEdge < dev_minPad){
 
 			// Compute global index
-			long long iGlobal = iyGlobal * yStride + dev_nz * ixGlobal + izGlobal;
+			long long iGlobal = iyGlobal * yStride + nz * ixGlobal + izGlobal;
 
 			// Compute damping coefficient
 			double damp = dev_cosDampingCoeff[distToEdge];
