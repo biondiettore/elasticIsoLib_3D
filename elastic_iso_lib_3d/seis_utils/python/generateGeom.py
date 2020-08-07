@@ -32,13 +32,13 @@ INPUT PARAMETERS:
 	inline_dir = [X] - string; Inline axis
 
 	# Receiver position (relative to a given shot)
-	min_offset = [no default] - float; minimum offset along the inline direction; sign matters!
+	min_offset = [no default] - float; minimum offset along the inline direction; (off = Xreceiver - XSource)!
 
-	max_offset = [no default] - float; maximum offset along the inline direction; sign matters!
+	max_offset = [no default] - float; maximum offset along the inline direction; (off = Xreceiver - XSource)!
 
-	min_cross_off = [no default] - float; minimum offset along the crossline direction
+	min_cross_off = [no default] - float; minimum offset along the crossline direction; (off = Xreceiver - XSource)!
 
-	max_cross_off = [no default] - float; maximum offset along the crossline direction
+	max_cross_off = [no default] - float; maximum offset along the crossline direction; (off = Xreceiver - XSource)!
 
 	n_recs = [no default] - int; number of receivers along the cable
 
