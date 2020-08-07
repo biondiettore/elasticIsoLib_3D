@@ -44,6 +44,9 @@ add_subdirectory(elastic_iso_double)
 # Elastic isotropic python interface
 add_subdirectory(python/python_double)
 
+# include folders for Seismic utilities
+add_subdirectory(seis_utils/python/)
+
 execute_process(COMMAND git submodule update --init --recursive -- external/pySolver WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(external/pySolver/GenericSolver)
 
