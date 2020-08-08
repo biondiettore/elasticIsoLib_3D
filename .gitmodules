@@ -4,3 +4,6 @@
 [submodule "elastic_iso_lib_3d/external/pySolver"]
 	path = elastic_iso_lib_3d/external/pySolver
 	url = http://zapad.Stanford.EDU/ettore88/python-solver.git
+[submodule "elastic_iso_lib_3d/external/pybind11"]
+	path = elastic_iso_lib_3d/external/pybind11
+	url = https://github.com/pybind/pybind11.git
