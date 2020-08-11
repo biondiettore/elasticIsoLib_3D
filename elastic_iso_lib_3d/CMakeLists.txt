@@ -47,6 +47,7 @@ add_subdirectory(elastic_iso_double)
 
 # Elastic isotropic python interface
 add_subdirectory(python/python_double)
+add_subdirectory(python/python_float)
 
 # include folders for Seismic utilities
 add_subdirectory(seis_utils/python/)

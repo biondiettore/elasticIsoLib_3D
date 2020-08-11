@@ -121,7 +121,7 @@ if __name__ == '__main__':
 	############################ Streamer geometry #############################
 
 	if geom == "streamers":
-		print("---- Streamer geometry ----")
+		print("---- Streamer geometry ----\n")
 
 		# Source geometry generation
 		firstShotx, firstShoty, firstShotz = parObject.getFloats("firstShotPos", [ox,oy,oz])
@@ -144,6 +144,7 @@ if __name__ == '__main__':
 		sourceGeomNd = sourceGeom.getNdArray()
 		# Set sources' depth
 		sourceGeomNd[2,:,:] = firstShotz
+		depth_source = firstShotz
 
 		xPos = np.linspace(firstShotx, firstShotx+(ns_inline-1)*ds_inline, ns_inline)
 
@@ -162,6 +163,7 @@ if __name__ == '__main__':
 		min_cross_off = parObject.getFloat("min_cross_off")
 		max_cross_off = parObject.getFloat("max_cross_off")
 		depth_cables = parObject.getFloat("depth_cables")
+		depth_rec = depth_cables
 
 		Nrecs = n_recs*n_cables
 
@@ -193,7 +195,7 @@ if __name__ == '__main__':
 
 	############################ Node geometry #################################
 	elif geom == "nodes":
-		print("---- Node geometry ----")
+		print("---- Node geometry ----\n")
 
 		# Shot geometry
 		firstShotx, firstShoty, firstShotz = parObject.getFloats("firstShotPos", [ox,oy,oz])
@@ -208,6 +210,7 @@ if __name__ == '__main__':
 		sourceGeomNd = sourceGeom.getNdArray()
 		# Set sources' depth
 		sourceGeomNd[2,:,:] = firstShotz
+		depth_source = firstShotz
 
 		xPos = np.linspace(firstShotx, firstShotx+(nx_shot-1)*dx_shot, nx_shot)
 
@@ -232,6 +235,7 @@ if __name__ == '__main__':
 		receiverGeomNd = receiverGeom.getNdArray()
 		# Set sources' depth
 		receiverGeomNd[2,:,:] = firstRecz
+		depth_rec = firstRecz
 
 		xPos = np.linspace(firstRecx, firstRecx+(nx_rec-1)*dx_rec, nx_rec)
 
@@ -244,6 +248,37 @@ if __name__ == '__main__':
 
 	else:
 		raise ValueError("ERROR! Unknonw geometry type: %s"%geom)
+
+	# General acquisition information
+	print("Propagation domain size:")
+	print("Extent in the x axis = %s [km or m]"%(max_x-ox))
+	print("Extent in the y axis = %s [km or m]"%(max_y-oy))
+	print("Extent in the z axis = %s [km or m]"%(max_z-oz))
+
+	print("\nAcquisition geometry info:")
+	max_shot_x = np.max(sourceGeomNd[0,:,:].ravel())
+	max_shot_y = np.max(sourceGeomNd[1,:,:].ravel())
+	min_shot_x = np.min(sourceGeomNd[0,:,:].ravel())
+	min_shot_y = np.min(sourceGeomNd[1,:,:].ravel())
+	print("Maximum x shot coordinate = %s"%max_shot_x)
+	print("Maximum y shot coordinate = %s"%max_shot_y)
+	print("Minimum x shot coordinate = %s"%min_shot_x)
+	print("Minimum y shot coordinate = %s"%min_shot_y)
+
+	max_rec_x = np.max(receiverGeomNd[0,:,:].ravel())
+	max_rec_y = np.max(receiverGeomNd[1,:,:].ravel())
+	min_rec_x = np.min(receiverGeomNd[0,:,:].ravel())
+	min_rec_y = np.min(receiverGeomNd[1,:,:].ravel())
+	print("Maximum x receiver coordinate = %s"%max_rec_x)
+	print("Maximum y receiver coordinate = %s"%max_rec_y)
+	print("Minimum x receiver coordinate = %s"%min_rec_x)
+	print("Minimum y receiver coordinate = %s"%min_rec_x)
+
+	# Checking if any receiver or shot is outside of the propagation boundaries
+	if ox > min_shot_x or max_x < max_shot_x or ox > min_shot_y or max_y < max_shot_y or not oz < depth_source < max_z:
+		raise ValueError("ERROR! One or more shots are outside of the propagation domain")
+	if ox > min_rec_x or max_x < max_rec_x or ox > min_rec_y or max_y < max_rec_y or not oz < depth_rec < max_z:
+		raise ValueError("ERROR! One or more receivers is outside of the propagation domain")
 
 	sourceGeom.writeVec(sourceGeomFile)
 	receiverGeom.writeVec(receiverGeomFile)
