@@ -18,11 +18,11 @@ set(HEADERS ${INC_DIR}/spaceInterpGpu_3D.h
 #Files to be compiled
 set(SRC_DIR src)
 #Files for nonlinear operator library
-set(SOURCE_NL ${SRC_DIR}/spaceInterpGpu_3D.cpp
+set(SOURCE_NL ${SRC_DIR}/nonlinearPropElasticShotsGpu_3D.cpp
+							${SRC_DIR}/spaceInterpGpu_3D.cpp
+							${SRC_DIR}/nonlinearPropElasticGpu_3D.cpp
 							${SRC_DIR}/stagger_3D.cpp
 							${SRC_DIR}/fdParamElastic_3D.cpp
-							${SRC_DIR}/nonlinearPropElasticShotsGpu_3D.cpp
-							${SRC_DIR}/nonlinearPropElasticGpu_3D.cpp
 							${SRC_DIR}/nonlinearPropElasticGpuFunctions_3D.cu
 )
 

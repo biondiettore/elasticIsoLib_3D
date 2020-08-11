@@ -1,5 +1,5 @@
-#ifndef NL_PROP_SHOTS_GPU_3D_H
-#define NL_PROP_SHOTS_GPU_3D_H 1
+#ifndef NL_PROP_ELASTIC_SHOTS_GPU_3D_H
+#define NL_PROP_ELASTIC_SHOTS_GPU_3D_H 1
 
 #include <tbb/tbb.h>
 #include <tbb/blocked_range.h>

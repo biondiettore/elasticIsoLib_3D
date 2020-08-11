@@ -286,9 +286,9 @@ def nonlinearOpInit_3D(args):
 	parObject=genericIO.io(params=sys.argv)
 
 	# Time Axis
-	nts=parObject.getInt("nts",-1)
+	nts=parObject.getInt("nts")
 	ots=parObject.getFloat("ots",0.0)
-	dts=parObject.getFloat("dts",-1.0)
+	dts=parObject.getFloat("dts")
 	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
 	dummyAxis=Hypercube.axis(n=1)
 	wavefieldAxis=Hypercube.axis(n=9)
@@ -358,7 +358,7 @@ class nonlinearPropElasticShotsGpu_3D(Op.Operator):
 			model = model.getCpp()
 		if("getCpp" in dir(data)):
 			data = data.getCpp()
-		with :pyElastic_iso_double_nl_3D.ostream_redirect():
+		with pyElastic_iso_double_nl_3D.ostream_redirect():
 			self.pyOp.forward(add,model,data)
 		return
 
@@ -368,7 +368,7 @@ class nonlinearPropElasticShotsGpu_3D(Op.Operator):
 	# 		model = model.getCpp()
 	# 	if("getCpp" in dir(data)):
 	# 		data = data.getCpp()
-	# 	with :pyElastic_iso_double_nl_3D.ostream_redirect():
+	# 	with pyElastic_iso_double_nl_3D.ostream_redirect():
 	# 		self.pyOp.forwardWavefield(add,model,data)
 	# 	return
 
@@ -378,7 +378,7 @@ class nonlinearPropElasticShotsGpu_3D(Op.Operator):
 	# 		model = model.getCpp()
 	# 	if("getCpp" in dir(data)):
 	# 		data = data.getCpp()
-	# 	with :pyElastic_iso_double_nl_3D.ostream_redirect():
+	# 	with pyElastic_iso_double_nl_3D.ostream_redirect():
 	# 		self.pyOp.adjoint(add,model,data)
 	# 	return
 
@@ -388,7 +388,7 @@ class nonlinearPropElasticShotsGpu_3D(Op.Operator):
 	# 		model = model.getCpp()
 	# 	if("getCpp" in dir(data)):
 	# 		data = data.getCpp()
-	# 	with :pyElastic_iso_double_nl_3D.ostream_redirect():
+	# 	with pyElastic_iso_double_nl_3D.ostream_redirect():
 	# 		self.pyOp.adjointWavefield(add,model,data)
 	# 	return
 
@@ -400,13 +400,13 @@ class nonlinearPropElasticShotsGpu_3D(Op.Operator):
 	# 	#Checking if getCpp is present
 	# 	if("getCpp" in dir(elasticParam)):
 	# 		elasticParam = elasticParam.getCpp()
-	# 	with :pyElastic_iso_double_nl_3D.ostream_redirect():
+	# 	with pyElastic_iso_double_nl_3D.ostream_redirect():
 	# 		self.pyOp.setBackground(elasticParam)
 	# 	return
 
 	def dotTestCpp(self,verb=False,maxError=.00001):
 		"""Method to call the Cpp class dot-product test"""
-		with :pyElastic_iso_double_nl_3D.ostream_redirect():
+		with pyElastic_iso_double_nl_3D.ostream_redirect():
 			result=self.pyOp.dotTest(verb,maxError)
 		return result
 

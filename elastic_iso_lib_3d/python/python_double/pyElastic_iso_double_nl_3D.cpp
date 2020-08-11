@@ -33,7 +33,6 @@ PYBIND11_MODULE(pyElastic_iso_double_nl_3D, clsGeneric) {
 
       .def("dotTest",(bool (nonlinearPropElasticShotsGpu_3D::*)(const bool, const double)) &nonlinearPropElasticShotsGpu_3D::dotTest,"Dot-Product Test")
 
-
-;
+			;
 
 }

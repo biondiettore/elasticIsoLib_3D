@@ -2,7 +2,6 @@
 #include <omp.h>
 #include "nonlinearPropElasticShotsGpu_3D.h"
 #include "nonlinearPropElasticGpu_3D.h"
-#include <ctime>
 
 nonlinearPropElasticShotsGpu_3D::nonlinearPropElasticShotsGpu_3D(std::shared_ptr<SEP::double4DReg> elasticParam, std::shared_ptr<paramObj> par, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorCenterGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorXGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorYGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorZGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorXZGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorXYGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> sourcesVectorYZGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorCenterGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorXGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorYGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorZGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorXZGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorXYGrid, std::vector<std::shared_ptr<spaceInterpGpu_3D>> receiversVectorYZGrid){
 
@@ -15,9 +14,9 @@ nonlinearPropElasticShotsGpu_3D::nonlinearPropElasticShotsGpu_3D(std::shared_ptr
 		createGpuIdList_3D();
   	_info = par->getInt("info", 0);
   	_deviceNumberInfo = par->getInt("deviceNumberInfo", 0);
-  	// if( not getGpuInfo(_gpuList, _info, _deviceNumberInfo)){
-		// 	throw std::runtime_error("Error in getGpuInfo");
-		// }; // Get info on GPU cluster and check that there are enough available GPUs
+  	if( not getGpuInfo_3D(_gpuList, _info, _deviceNumberInfo)){
+			throw std::runtime_error("Error in getGpuInfo_3D");
+		}; // Get info on GPU cluster and check that there are enough available GPUs
   	_saveWavefield = _par->getInt("saveWavefield", 0);
   	_wavefieldShotNumber = _par->getInt("wavefieldShotNumber", 0);
   	if (_info == 1 && _saveWavefield == 1){
