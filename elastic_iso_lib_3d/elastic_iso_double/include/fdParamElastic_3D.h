@@ -53,7 +53,7 @@ class fdParamElastic_3D{
 		int _nz, _ny, _nx;
 		unsigned long long _nModel;
     const int _nwc=9;
-		int _zPadMinus, _zPadPlus, _xPadMinus, _xPadPlus, _yPadMinus, _yPadPlus, _zPad, _xPad, _yPad, _minPad;
+		int _zPadMinus, _zPadPlus, _xPadMinus, _xPadPlus, _zPad, _xPad, _yPad, _minPad;
 		double _dz, _dy, _dx, _oz, _oy, _ox, _fMax;
 		int _saveWavefield, _blockSize, _fat;
 		double _alphaCos;

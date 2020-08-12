@@ -29,10 +29,10 @@ if __name__ == '__main__':
 		# Check that model was provided
 		modelFile=parObject.getString("model","noModelFile")
 		if (modelFile == "noModelFile"):
-			raise IOError("**** ERROR: User did not provide model file ****\n")
+			raise IOError("**** ERROR: User did not provide model file [model] ****\n")
 		dataFile=parObject.getString("data","noDataFile")
 		if (dataFile == "noDataFile"):
-			raise IOError("**** ERROR: User did not provide data file name ****\n")
+			raise IOError("**** ERROR: User did not provide data file name [data] ****\n")
 		#modelFloat=genericIO.defaultIO.getVector(modelFile,ndims=3)
 		modelFloat=genericIO.defaultIO.getVector(modelFile)
 		modelDMat=modelDouble.getNdArray()

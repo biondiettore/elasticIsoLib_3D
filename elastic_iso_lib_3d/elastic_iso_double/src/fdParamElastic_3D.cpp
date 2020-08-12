@@ -59,9 +59,7 @@ fdParamElastic_3D::fdParamElastic_3D(const std::shared_ptr<double4DReg> elasticP
 
 	/***** Horizontal x axis *****/
 	_ny = _par->getInt("ny");
-	_yPadPlus = _par->getInt("yPadPlus");
-	_yPadMinus = _par->getInt("yPadMinus");
-	_yPad = std::min(_yPadMinus, _yPadPlus);
+	_yPad = _par->getInt("yPad");
 	_dy = _par->getFloat("dy",-1.0);
 	_oy = _elasticParam->getHyper()->getAxis(3).o;
 	_yAxis = axis(_ny, _oy, _dy);

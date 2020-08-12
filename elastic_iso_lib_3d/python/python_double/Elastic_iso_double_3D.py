@@ -32,7 +32,7 @@ def buildSourceGeometry_3D(parObject,elasticParam):
 	sourceGeomFile = parObject.getString("sourceGeomFile")
 
 	# Get total number of shots
-	if (nShot==-1):
+	if (nExp==-1):
 		raise ValueError("**** ERROR [buildSourceGeometry_3D]: User must provide the total number of shots ****\n")
 
 	# Read parameters for spatial interpolation
@@ -125,15 +125,15 @@ def buildSourceGeometry_3D(parObject,elasticParam):
 		xCoord.getNdArray()[:] = sourceGeomVectorNd[0,:,iExp]
 
 		# Central grid
-		sourcesVectorCenterGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),centerGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
+		sourcesVectorCenterGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),centerGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
 		# Staggered grids for forces
-		sourcesVectorXGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),xGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
-		sourcesVectorYGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
-		sourcesVectorZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),zGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
+		sourcesVectorXGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+		sourcesVectorYGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),yGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+		sourcesVectorZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),zGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
 		# Staggered grids for stresses
-		sourcesVectorXZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),xzGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
-		sourcesVectorXYGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),xyGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
-		sourcesVectorYZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yzGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
+		sourcesVectorXZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xzGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+		sourcesVectorXYGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xyGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+		sourcesVectorYZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),yzGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
 
 	return sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,sourceAxis
 
@@ -158,7 +158,7 @@ def buildReceiversGeometry_3D(parObject,elasticParam):
 	# Check that user provides the number of receivers per shot (must be constant)
 	nReceiverPerShot = parObject.getInt("nReceiverPerShot",-1)
 	if (nReceiverPerShot == -1):
-		raise ValueError("**** ERROR [buildReceiversGeometry_3D]: User must provide the total number of receivers per shot (this number must be the same for all shots) ****\n")
+		raise ValueError("**** ERROR [buildReceiversGeometry_3D]: User must provide the total number of receivers per shot (this number must be the same for all shots [nReceiverPerShot]) ****\n")
 
 	# Read parameters for spatial interpolation
 	if (spaceInterpMethod == "linear"):
@@ -259,17 +259,17 @@ def buildReceiversGeometry_3D(parObject,elasticParam):
 		xCoordNd[:]=receiverGeomVectorNd[0,:,iExp]
 		yCoordNd[:]=receiverGeomVectorNd[1,:,iExp]
 
-		for iRec in range(nRecGeom):
+		for iRec in range(nReceiverPerShot):
 			# Central grid
-			recVectorCenterGrid.append(spaceInterpGpu(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),centerGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
+			recVectorCenterGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),centerGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
 			# Staggered grids for velocities
-			recVectorXGrid.append(spaceInterpGpu(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
-			recVectorYGrid.append(spaceInterpGpu(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),yGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
-			recVectorZGrid.append(spaceInterpGpu(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),zGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
+			recVectorXGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+			recVectorYGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),yGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+			recVectorZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),zGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
 			# Staggered grids for stresses
-			recVectorXZGrid.append(spaceInterpGpu(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xzGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
-			recVectorXYGrid.append(spaceInterpGpu(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xyGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
-			recVectorYZGrid.append(spaceInterpGpu(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),yzGridHyper.getCpp(),nts,spaceInterpMethod,hFilter1d,dipole,zDipoleShift,xDipoleShift,yDipoleShift))
+			recVectorXZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xzGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+			recVectorXYGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xyGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+			recVectorYZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),yzGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
 
 
 	return recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid,receiverAxis
@@ -300,9 +300,6 @@ def nonlinearOpInit_3D(args):
 	modelHyper=Hypercube.hypercube(axes=[timeAxis,sourceSimAxis,wavefieldAxis,dummyAxis])
 
 	modelDouble=SepVector.getSepVector(modelHyper,storage="dataDouble")
-
-	#Local vector copy useful for dask interface
-	modelFloatLocal = modelFloat
 
 	# elatic params
 	elasticParam=parObject.getString("elasticParam", "noElasticParamFile")
@@ -340,7 +337,7 @@ def nonlinearOpInit_3D(args):
 class nonlinearPropElasticShotsGpu_3D(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for non-linear propagator"""
 
-	def __init__(self,domain,range,elasticParam,paramP,parObject,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid):
+	def __init__(self,domain,range,elasticParam,paramP,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid):
 		#Domain = source wavelet
 		#Range = recorded data space
 		self.setDomainRange(domain,range)

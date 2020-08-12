@@ -9,8 +9,8 @@ nonlinearPropElasticShotsGpu_3D::nonlinearPropElasticShotsGpu_3D(std::shared_ptr
   	_par = par;
   	_elasticParam = elasticParam;
   	_nExp = par->getInt("nExp");
-		_ginsu = par->getInt("ginsu");
-		_domDec = par->getInt("_domDec");
+		_ginsu = par->getInt("ginsu",0);
+		_domDec = par->getInt("_domDec",0);
 		createGpuIdList_3D();
   	_info = par->getInt("info", 0);
   	_deviceNumberInfo = par->getInt("deviceNumberInfo", 0);
@@ -181,6 +181,7 @@ void nonlinearPropElasticShotsGpu_3D::forward(const bool add, const std::shared_
 	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 		deallocateNonlinearElasticGpu_3D(iGpu,_gpuList[iGpu]);
 	}
+
 }
 
 void nonlinearPropElasticShotsGpu_3D::adjoint(const bool add, const std::shared_ptr<double4DReg> model, std::shared_ptr<double4DReg> data) const{

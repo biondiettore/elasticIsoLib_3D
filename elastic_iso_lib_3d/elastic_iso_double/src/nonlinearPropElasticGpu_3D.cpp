@@ -78,7 +78,6 @@ void nonlinearPropElasticGpu_3D::forward(const bool add, const std::shared_ptr<d
 	std::shared_ptr<double2DReg> dataIrreg_sigmaxy(new double2DReg(_fdParamElastic->_nts, _nReceiversIrregXYGrid));
 	std::shared_ptr<double2DReg> dataIrreg_sigmayz(new double2DReg(_fdParamElastic->_nts, _nReceiversIrregYZGrid));
 
-
 	if (!add){
 	  data->scale(0.0);
   } else {
@@ -125,39 +124,39 @@ void nonlinearPropElasticGpu_3D::forward(const bool add, const std::shared_ptr<d
 	// fx
 	long long shift;
 	long long chunk = _nSourcesIrregXGrid*_fdParamElastic->_nts;
-  std::memcpy( modelIrreg_vx->getVals(), model->getVals(), chunk*sizeof(double) );
+  std::memcpy(modelIrreg_vx->getVals(), model->getVals(), chunk*sizeof(double));
 	// fy
 	shift = chunk;
 	chunk = _nSourcesIrregYGrid*_fdParamElastic->_nts;
-  std::memcpy( modelIrreg_vy->getVals()+shift, model->getVals()+shift, chunk*sizeof(double) );
+  std::memcpy(modelIrreg_vy->getVals(), model->getVals()+shift, chunk*sizeof(double));
 	// fz
 	shift += chunk;
 	chunk = _nSourcesIrregZGrid*_fdParamElastic->_nts;
-  std::memcpy( modelIrreg_vz->getVals()+shift, model->getVals()+shift, chunk*sizeof(double) );
+  std::memcpy(modelIrreg_vz->getVals(), model->getVals()+shift, chunk*sizeof(double));
 	// mxx
 	shift += chunk;
 	chunk = _nSourcesIrregCenterGrid*_fdParamElastic->_nts;
-  std::memcpy( modelIrreg_sigmaxx->getVals()+shift, model->getVals()+shift, chunk*sizeof(double) );
+  std::memcpy(modelIrreg_sigmaxx->getVals(), model->getVals()+shift, chunk*sizeof(double));
 	// myy
 	shift += chunk;
 	chunk = _nSourcesIrregCenterGrid*_fdParamElastic->_nts;
-  std::memcpy( modelIrreg_sigmayy->getVals()+shift, model->getVals()+shift, chunk*sizeof(double) );
+  std::memcpy(modelIrreg_sigmayy->getVals(), model->getVals()+shift, chunk*sizeof(double));
 	// mzz
 	shift += chunk;
 	chunk = _nSourcesIrregCenterGrid*_fdParamElastic->_nts;
-  std::memcpy( modelIrreg_sigmazz->getVals()+shift, model->getVals()+shift, chunk*sizeof(double) );
+  std::memcpy(modelIrreg_sigmazz->getVals(), model->getVals()+shift, chunk*sizeof(double));
 	// mxz
 	shift += chunk;
 	chunk = _nSourcesIrregXZGrid*_fdParamElastic->_nts;
-  std::memcpy( modelIrreg_sigmaxz->getVals()+shift, model->getVals()+shift, chunk*sizeof(double) );
+  std::memcpy(modelIrreg_sigmaxz->getVals(), model->getVals()+shift, chunk*sizeof(double));
 	// mxz
 	shift += chunk;
 	chunk = _nSourcesIrregXYGrid*_fdParamElastic->_nts;
-  std::memcpy( modelIrreg_sigmaxy->getVals()+shift, model->getVals()+shift, chunk*sizeof(double) );
+  std::memcpy(modelIrreg_sigmaxy->getVals(), model->getVals()+shift, chunk*sizeof(double));
 	// myz
 	shift += chunk;
 	chunk = _nSourcesIrregYZGrid*_fdParamElastic->_nts;
-  std::memcpy( modelIrreg_sigmayz->getVals()+shift, model->getVals()+shift, chunk*sizeof(double) );
+  std::memcpy(modelIrreg_sigmayz->getVals(), model->getVals()+shift, chunk*sizeof(double));
 
 	/* Interpolate model (seismic source) to regular grid */
   _sourcesXGrid->adjoint(false, modelRegDts_vx, modelIrreg_vx);
@@ -192,6 +191,7 @@ void nonlinearPropElasticGpu_3D::forward(const bool add, const std::shared_ptr<d
 	  		(*modelRegDts_vz->_mat)[is][it] *= _fdParamElastic->_rhozDtw[(_sourcesZGrid->getRegPosUnique())[is]];
 		}
   }
+
 	// moment tensor components
 	#pragma omp parallel for collapse(2)
   for(long long is = 0; is < _nSourcesRegCenterGrid; is++){ //loop over number of reg sources xz grid
@@ -235,7 +235,6 @@ void nonlinearPropElasticGpu_3D::forward(const bool add, const std::shared_ptr<d
 	  		(*modelRegDts_sigmayz->_mat)[is][it] *= _fdParamElastic->_muyzDtw[(_sourcesYZGrid->getRegPosUnique())[is]];
 		}
   }
-
 
 	/*Scaling by the inverse of the space discretization*/
 	double area_scale = 1.0/(_fdParamElastic->_dx * _fdParamElastic->_dy * _fdParamElastic->_dz);
