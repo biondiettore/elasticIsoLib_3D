@@ -235,7 +235,7 @@ def buildReceiversGeometry_3D(parObject,elasticParam):
 	# Read size of receivers' geometry file
 	# Check consistency between the size of the receiver geometry file and the number of receivers per shot
 	if(nReceiverPerShot != receiverGeomVectorNd.shape[1]):
-		raise ValueError("**** ERROR [buildReceiversGeometry_3D]: Number of receivers from parfile (#shot=%s) not consistent with receivers' geometry file (#shots=%s) ****\n"%(nReceiverPerShot,receiverGeomVectorNd.shape[1]))
+		raise ValueError("**** ERROR [buildReceiversGeometry_3D]: Number of receivers from parfile (#receivers=%s) not consistent with receivers' geometry file (#receivers=%s) ****\n"%(nReceiverPerShot,receiverGeomVectorNd.shape[1]))
 
 	nExp = receiverGeomVectorNd.shape[2]
 	if (nExp==1 and info==1):

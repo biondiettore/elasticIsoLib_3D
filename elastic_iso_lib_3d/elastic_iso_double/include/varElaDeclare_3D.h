@@ -32,7 +32,6 @@
 	__constant__ double dev_zCoeff[COEFF_SIZE];
 
 	// Constant memory
-	__constant__ double dev_coeff[COEFF_SIZE];
 	__constant__ int dev_nTimeInterpFilter; // Time interpolation filter length
 	__constant__ int dev_hTimeInterpFilter; // Time interpolation filter half-length
 	__constant__ double dev_timeInterpFilter[2*(SUB_MAX+1)]; // Time interpolation filter stored in constant memory

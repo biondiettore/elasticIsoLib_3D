@@ -145,8 +145,8 @@ fdParamElastic_3D::fdParamElastic_3D(const std::shared_ptr<double4DReg> elasticP
 	std::shared_ptr<staggerZ> _staggerZ(new staggerZ(_rhozDtwReg,_rhozDtwReg));
 
 	//slice _elasticParam into 3d
-	std::memcpy( _lambDtwReg->getVals(), _elasticParam->getVals(), _nModel*sizeof(double) );
-	std::memcpy( _lamb2MuDtwReg->getVals(), _elasticParam->getVals()+2*_nModel, _nModel*sizeof(double) );
+	std::memcpy(_lambDtwReg->getVals(), _elasticParam->getVals(), _nModel*sizeof(double));
+	std::memcpy(_lamb2MuDtwReg->getVals(), _elasticParam->getVals()+2*_nModel, _nModel*sizeof(double));
 
 	//_lambDtwReg holds density. _rhoxDtwReg, _rhoyDtwReg, _rhozDtwReg are empty.
 	_staggerX->adjoint(0, _rhoxDtwReg, _lambDtwReg);
@@ -174,7 +174,7 @@ fdParamElastic_3D::fdParamElastic_3D(const std::shared_ptr<double4DReg> elasticP
 				(*_rhoyDtwReg->_mat)[iy][ix][iz] = 2.0*_dtw / (*_rhoyDtwReg->_mat)[iy][ix][iz];
 				(*_rhozDtwReg->_mat)[iy][ix][iz] = 2.0*_dtw / (*_rhozDtwReg->_mat)[iy][ix][iz];
 				(*_lambDtwReg->_mat)[iy][ix][iz] = 2.0*_dtw * (*_elasticParam->_mat)[1][iy][ix][iz];
-				(*_lamb2MuDtwReg->_mat)[iy][ix][iz] = 2.0*_dtw * ((*_elasticParam->_mat)[1][iy][ix][iz] + 2 * (*_elasticParam->_mat)[2][iy][ix][iz]);
+				(*_lamb2MuDtwReg->_mat)[iy][ix][iz] = 2.0*_dtw * ((*_elasticParam->_mat)[1][iy][ix][iz] + 2.0 * (*_elasticParam->_mat)[2][iy][ix][iz]);
 				(*_muxzDtwReg->_mat)[iy][ix][iz] = 2.0*_dtw * (*_muxzDtwReg->_mat)[iy][ix][iz];
 				(*_muxyDtwReg->_mat)[iy][ix][iz] = 2.0*_dtw * (*_muxyDtwReg->_mat)[iy][ix][iz];
 				(*_muyzDtwReg->_mat)[iy][ix][iz] = 2.0*_dtw * (*_muyzDtwReg->_mat)[iy][ix][iz];

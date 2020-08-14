@@ -181,7 +181,7 @@ void nonlinearPropElasticGpu_3D::forward(const bool add, const std::shared_ptr<d
 	#pragma omp parallel for collapse(2)
   for(long long is = 0; is < _nSourcesRegYGrid; is++){ //loop over number of reg sources y grid
 		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
-	  		(*modelRegDts_vy->_mat)[is][it] *= _fdParamElastic->_rhoxDtw[(_sourcesYGrid->getRegPosUnique())[is]];
+	  		(*modelRegDts_vy->_mat)[is][it] *= _fdParamElastic->_rhoyDtw[(_sourcesYGrid->getRegPosUnique())[is]];
 		}
   }
 	// fz

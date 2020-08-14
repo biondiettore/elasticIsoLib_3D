@@ -189,8 +189,8 @@ void staggerY::adjoint(const bool add,const  std::shared_ptr<double3DReg> model,
   if(!add) model->scale(0.);
 
   #pragma omp parallel for collapse(3)
-	for(int iy = 0; iy < _ny-1; iy++){
-	  for(int ix = 1; ix < _nx; ix++){
+	for(int iy = 1; iy < _ny-1; iy++){
+	  for(int ix = 0; ix < _nx; ix++){
 	    for(int iz = 0; iz < _nz; iz++){
 	      (*model->_mat)[iy][ix][iz] += 0.5 * ((*data->_mat)[iy][ix][iz] + (*data->_mat)[iy-1][ix][iz] );
 	    }
