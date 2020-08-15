@@ -240,7 +240,7 @@ void fdParamElastic_3D::getInfo_3D(){
 		// Horizontal x spatial sampling
 		std::cerr << "-------------------- Horizontal y spatial sampling ------------------" << std::endl;
 		std::cerr << std::setprecision(2);
-		std::cerr << "ny = " << _ny << " [samples], dy = " << _dy << " [m], ox = " << _oy+(_fat+_yPad)*_dx << " [m]" << std::endl;
+		std::cerr << "ny = " << _ny << " [samples], dy = " << _dy << " [m], oy = " << _oy+(_fat+_yPad)*_dx << " [m]" << std::endl;
 		std::cerr << "Model width = " << (_ny-2*_fat-2*_yPad-1)*_dy << " [m]" << std::endl;
 		std::cerr << "Left padding = " << _yPad << " [samples], right padding = " << _yPad << " [samples]" << std::endl;
 		std::cerr << " " << std::endl;
