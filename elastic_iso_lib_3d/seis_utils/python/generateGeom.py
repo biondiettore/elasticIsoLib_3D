@@ -118,6 +118,14 @@ if __name__ == '__main__':
 	oy = yAxis.o
 	max_y = oy + (ny-1) * dy
 
+	# Error allowed for the soruce/receiver positions due to rounding error
+	zTolerance=parObject.getFloat("zTolerance",0.1)
+	xTolerance=parObject.getFloat("xTolerance",0.1)
+	yTolerance=parObject.getFloat("yTolerance",0.1)
+	zError=dz*zTolerance
+	xError=dx*xTolerance
+	yError=dy*yTolerance
+
 	############################ Streamer geometry #############################
 
 	if geom == "streamers":
@@ -275,9 +283,9 @@ if __name__ == '__main__':
 	print("Minimum y receiver coordinate = %s"%min_rec_x)
 
 	# Checking if any receiver or shot is outside of the propagation boundaries
-	if ox > min_shot_x or max_x < max_shot_x or ox > min_shot_y or max_y < max_shot_y or not oz < depth_source < max_z:
+	if ox-min_shot_x > xError or max_shot_x-max_x > xError or oy-min_shot_y > yError or max_shot_y-max_y > yError or not oz-zError < depth_source < max_z+zError:
 		raise ValueError("ERROR! One or more shots are outside of the propagation domain")
-	if ox > min_rec_x or max_x < max_rec_x or ox > min_rec_y or max_y < max_rec_y or not oz < depth_rec < max_z:
+	if ox-min_rec_x > xError or max_rec_x-max_x > xError or oy-min_rec_y > yError or max_rec_y-max_y > yError or not oz-zError < depth_rec < max_z+zError:
 		raise ValueError("ERROR! One or more receivers is outside of the propagation domain")
 
 	sourceGeom.writeVec(sourceGeomFile)

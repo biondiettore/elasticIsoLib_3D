@@ -707,8 +707,45 @@ void launchFwdRecordInterpDataKernels_3D(int nblockDataCenterGrid, int nblockDat
 /************************************************/
 // 				 Kernel launching ADJ functions
 /************************************************/
+void launchAdjStepKernels_3D(dim3 dimGrid, dim3 dimBlock, int nx, int ny, int nz, int iGpu){
+		kernel_exec(stepAdjGpu_3D<<<dimGrid, dimBlock>>>(dev_p0_vx[iGpu], dev_p0_vy[iGpu], dev_p0_vz[iGpu], dev_p0_sigmaxx[iGpu], dev_p0_sigmayy[iGpu], dev_p0_sigmazz[iGpu], dev_p0_sigmaxz[iGpu], dev_p0_sigmaxy[iGpu], dev_p0_sigmayz[iGpu], dev_p1_vx[iGpu], dev_p1_vy[iGpu], dev_p1_vz[iGpu], dev_p1_sigmaxx[iGpu], dev_p1_sigmayy[iGpu], dev_p1_sigmazz[iGpu], dev_p1_sigmaxz[iGpu], dev_p1_sigmaxy[iGpu], dev_p1_sigmayz[iGpu], dev_p0_vx[iGpu], dev_p0_vy[iGpu], dev_p0_vz[iGpu], dev_p0_sigmaxx[iGpu], dev_p0_sigmayy[iGpu], dev_p0_sigmazz[iGpu], dev_p0_sigmaxz[iGpu], dev_p0_sigmaxy[iGpu], dev_p0_sigmayz[iGpu], dev_rhoxDtw[iGpu], dev_rhoyDtw[iGpu], dev_rhozDtw[iGpu], dev_lamb2MuDtw[iGpu], dev_lambDtw[iGpu], dev_muxzDtw[iGpu], dev_muxyDtw[iGpu], dev_muyzDtw[iGpu], nx, ny, nz));
+}
 
+void launchAdjInterpInjectDataKernels_3D(int nblockDataCenterGrid, int nblockDataXGrid, int nblockDataYGrid, int nblockDataZGrid, int nblockDataXZGrid, int nblockDataXYGrid, int nblockDataYZGrid, long long nReceiversRegCenterGrid, long long nReceiversRegXGrid, long long nReceiversRegYGrid, long long nReceiversRegZGrid, long long nReceiversRegXZGrid, long long nReceiversRegXYGrid, long long nReceiversRegYZGrid, int its, int it2, int iGpu){
+	// Sxx, Syy, Szz
+	kernel_exec(ker_inject_data_centerGrid_3D<<<nblockDataCenterGrid, BLOCK_SIZE_DATA>>>(dev_dataRegDts_sigmaxx[iGpu], dev_dataRegDts_sigmayy[iGpu], dev_dataRegDts_sigmazz[iGpu], dev_p0_sigmaxx[iGpu], dev_p0_sigmayy[iGpu], dev_p0_sigmazz[iGpu], its, it2, dev_receiversPositionRegCenterGrid[iGpu], nReceiversRegCenterGrid));
+	// Vx
+	kernel_exec(ker_inject_data_xGrid_3D<<<nblockDataXGrid, BLOCK_SIZE_DATA>>>(dev_dataRegDts_vx[iGpu], dev_p0_vx[iGpu], its, it2, dev_receiversPositionRegXGrid[iGpu], nReceiversRegXGrid));
+	// Vy
+	kernel_exec(ker_inject_data_yGrid_3D<<<nblockDataYGrid, BLOCK_SIZE_DATA>>>(dev_dataRegDts_vy[iGpu], dev_p0_vy[iGpu], its, it2, dev_receiversPositionRegYGrid[iGpu], nReceiversRegYGrid));
+	// Vz
+	kernel_exec(ker_inject_data_zGrid_3D<<<nblockDataZGrid, BLOCK_SIZE_DATA>>>(dev_dataRegDts_vz[iGpu], dev_p0_vz[iGpu], its, it2, dev_receiversPositionRegZGrid[iGpu], nReceiversRegZGrid));
+	// Sxz
+	kernel_exec(ker_inject_data_xzGrid_3D<<<nblockDataXZGrid, BLOCK_SIZE_DATA>>>(dev_dataRegDts_sigmaxz[iGpu], dev_p0_sigmaxz[iGpu], its, it2, dev_receiversPositionRegXZGrid[iGpu], nReceiversRegXZGrid));
+	// Sxy
+	kernel_exec(ker_inject_data_xyGrid_3D<<<nblockDataXYGrid, BLOCK_SIZE_DATA>>>(dev_dataRegDts_sigmaxy[iGpu], dev_p0_sigmaxy[iGpu], its, it2, dev_receiversPositionRegXYGrid[iGpu], nReceiversRegXYGrid));
+	// Syz
+	kernel_exec(ker_inject_data_yzGrid_3D<<<nblockDataYZGrid, BLOCK_SIZE_DATA>>>(dev_dataRegDts_sigmayz[iGpu], dev_p0_sigmayz[iGpu], its, it2, dev_receiversPositionRegYZGrid[iGpu], nReceiversRegYZGrid));
 
+}
+
+void launchAdjExtractSource_3D(int nblockSouCenterGrid, int nblockSouXGrid, int nblockSouYGrid, int nblockSouZGrid, int nblockSouXZGrid, int nblockSouXYGrid, int nblockSouYZGrid, long long nSourcesRegCenterGrid, long long nSourcesRegXGrid, long long nSourcesRegYGrid, long long nSourcesRegZGrid, long long nSourcesRegXZGrid, long long nSourcesRegXYGrid, long long nSourcesRegYZGrid, int its, int it2, int iGpu){
+	// Mxx, Myy, Mzz
+	kernel_exec(ker_record_source_centerGrid_3D<<<nblockSouCenterGrid, BLOCK_SIZE_DATA>>>(dev_p0_sigmaxx[iGpu], dev_p0_sigmayy[iGpu], dev_p0_sigmazz[iGpu], dev_modelRegDts_sigmaxx[iGpu], dev_modelRegDts_sigmayy[iGpu], dev_modelRegDts_sigmazz[iGpu], its, it2, dev_sourcesPositionRegCenterGrid[iGpu], nSourcesRegCenterGrid));
+	// fx
+	kernel_exec(ker_record_source_xGrid_3D<<<nblockSouXGrid, BLOCK_SIZE_DATA>>>(dev_p0_vx[iGpu], dev_modelRegDts_vx[iGpu], its, it2, dev_sourcesPositionRegXGrid[iGpu], nSourcesRegXGrid));
+	// fy
+	kernel_exec(ker_record_source_yGrid_3D<<<nblockSouYGrid, BLOCK_SIZE_DATA>>>(dev_p0_vy[iGpu], dev_modelRegDts_vy[iGpu], its, it2, dev_sourcesPositionRegYGrid[iGpu], nSourcesRegYGrid));
+	// fz
+	kernel_exec(ker_record_source_zGrid_3D<<<nblockSouZGrid, BLOCK_SIZE_DATA>>>(dev_p0_vz[iGpu], dev_modelRegDts_vz[iGpu], its, it2, dev_sourcesPositionRegZGrid[iGpu], nSourcesRegZGrid));
+	// Mxz
+	kernel_exec(ker_record_source_xzGrid_3D<<<nblockSouXZGrid, BLOCK_SIZE_DATA>>>(dev_p0_sigmaxz[iGpu], dev_modelRegDts_sigmaxz[iGpu], its, it2, dev_sourcesPositionRegXZGrid[iGpu], nSourcesRegXZGrid));
+	// Mxy
+	kernel_exec(ker_record_source_xyGrid_3D<<<nblockSouXYGrid, BLOCK_SIZE_DATA>>>(dev_p0_sigmaxy[iGpu], dev_modelRegDts_sigmaxy[iGpu], its, it2, dev_sourcesPositionRegXYGrid[iGpu], nSourcesRegXYGrid));
+	// Myz
+	kernel_exec(ker_inject_source_yzGrid_3D<<<nblockSouYZGrid, BLOCK_SIZE_DATA>>>(dev_p0_sigmayz[iGpu], dev_modelRegDts_sigmayz[iGpu], its, it2, dev_sourcesPositionRegYZGrid[iGpu], nSourcesRegYZGrid));
+
+}
 
 /************************************************/
 // 				 Interface functions
@@ -750,10 +787,6 @@ void propElasticFwdGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double
 		int nblockSouXYGrid = (nSourcesRegXYGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
 		int nblockSouYZGrid = (nSourcesRegYZGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
 
-		long long tmp_nModel = nz;
-		tmp_nModel *= nx*ny;
-		double * temp = new double[tmp_nModel];
-
 		// Start propagation
 		for (int its = 0; its < host_nts-1; its++){
 				// std::cout << "its = " << its << std::endl;
@@ -763,31 +796,6 @@ void propElasticFwdGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double
 
 							// Step forward
 							launchFwdStepKernels_3D(dimGrid, dimBlock, nx, ny, nz, iGpu);
-							// std::cout << "here2 itw = " << itw << std::endl;
-							// cuda_call(cudaMemcpy(temp, dev_p0_vx[iGpu], tmp_nModel*sizeof(double), cudaMemcpyDeviceToHost));
-							// std::cout << "Max vx = " << *std::max_element(temp,temp+tmp_nModel) << std::endl;
-							// std::cout << "Min vx = " << *std::min_element(temp,temp+tmp_nModel) << std::endl;
-							// cuda_call(cudaMemcpy(temp, dev_p0_vy[iGpu], tmp_nModel*sizeof(double), cudaMemcpyDeviceToHost));
-							// std::cout << "Max vy = " << *std::max_element(temp,temp+tmp_nModel) << std::endl;
-							// std::cout << "Min vy = " << *std::min_element(temp,temp+tmp_nModel) << std::endl;
-							// cuda_call(cudaMemcpy(temp, dev_p0_vz[iGpu], tmp_nModel*sizeof(double), cudaMemcpyDeviceToHost));
-							// std::cout << "Max vz = " << *std::max_element(temp,temp+tmp_nModel) << std::endl;
-							// std::cout << "Min vz = " << *std::min_element(temp,temp+tmp_nModel) << std::endl;
-							// cuda_call(cudaMemcpy(temp, dev_p0_sigmaxx[iGpu], tmp_nModel*sizeof(double), cudaMemcpyDeviceToHost));
-							// std::cout << "Max sigmaxx = " << *std::max_element(temp,temp+tmp_nModel) << std::endl;
-							// std::cout << "Min sigmaxx = " << *std::min_element(temp,temp+tmp_nModel) << std::endl;
-							// cuda_call(cudaMemcpy(temp, dev_p0_sigmazz[iGpu], tmp_nModel*sizeof(double), cudaMemcpyDeviceToHost));
-							// std::cout << "Max sigmazz = " << *std::max_element(temp,temp+tmp_nModel) << std::endl;
-							// std::cout << "Min sigmazz = " << *std::min_element(temp,temp+tmp_nModel) << std::endl;
-							// cuda_call(cudaMemcpy(temp, dev_p0_sigmaxz[iGpu], tmp_nModel*sizeof(double), cudaMemcpyDeviceToHost));
-							// std::cout << "Max sigmaxz = " << *std::max_element(temp,temp+tmp_nModel) << std::endl;
-							// std::cout << "Min sigmaxz = " << *std::min_element(temp,temp+tmp_nModel) << std::endl;
-							// cuda_call(cudaMemcpy(temp, dev_p0_sigmaxy[iGpu], tmp_nModel*sizeof(double), cudaMemcpyDeviceToHost));
-							// std::cout << "Max sigmaxy = " << *std::max_element(temp,temp+tmp_nModel) << std::endl;
-							// std::cout << "Min sigmaxy = " << *std::min_element(temp,temp+tmp_nModel) << std::endl;
-							// cuda_call(cudaMemcpy(temp, dev_p0_sigmayz[iGpu], tmp_nModel*sizeof(double), cudaMemcpyDeviceToHost));
-							// std::cout << "Max sigmayz = " << *std::max_element(temp,temp+tmp_nModel) << std::endl;
-							// std::cout << "Min sigmayz = " << *std::min_element(temp,temp+tmp_nModel) << std::endl;
 							// Inject source
 							launchFwdInjectSourceKernels_3D(nblockSouCenterGrid, nblockSouXGrid, nblockSouYGrid, nblockSouZGrid,nblockSouXZGrid, nblockSouXYGrid, nblockSouYZGrid, nSourcesRegCenterGrid, nSourcesRegXGrid, nSourcesRegYGrid, nSourcesRegZGrid, nSourcesRegXZGrid, nSourcesRegXYGrid, nSourcesRegYZGrid, its, it2, iGpu);
 							// Damp wavefields
@@ -811,7 +819,7 @@ void propElasticFwdGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double
 		cuda_call(cudaMemcpy(dataRegDts_sigmaxy, dev_dataRegDts_sigmaxy[iGpu], nReceiversRegXYGrid*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
 		cuda_call(cudaMemcpy(dataRegDts_sigmayz, dev_dataRegDts_sigmayz[iGpu], nReceiversRegYZGrid*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
 
-		// // Deallocate all slices
+		// Deallocate all slices
 		cuda_call(cudaFree(dev_modelRegDts_vx[iGpu]));
 		cuda_call(cudaFree(dev_modelRegDts_vy[iGpu]));
 		cuda_call(cudaFree(dev_modelRegDts_vz[iGpu]));
@@ -851,6 +859,106 @@ void propElasticFwdGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double
 }
 
 
+void propElasticAdjGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double *modelRegDts_vz, double *modelRegDts_sigmaxx, double *modelRegDts_sigmayy, double *modelRegDts_sigmazz, double *modelRegDts_sigmaxz, double *modelRegDts_sigmaxy, double *modelRegDts_sigmayz, double *dataRegDts_vx, double *dataRegDts_vy, double *dataRegDts_vz, double *dataRegDts_sigmaxx, double *dataRegDts_sigmayy, double *dataRegDts_sigmazz, double *dataRegDts_sigmaxz, double *dataRegDts_sigmaxy, double *dataRegDts_sigmayz, long long *sourcesPositionRegCenterGrid, long long nSourcesRegCenterGrid, long long *sourcesPositionRegXGrid, long long nSourcesRegXGrid, long long *sourcesPositionRegYGrid, long long nSourcesRegYGrid, long long *sourcesPositionRegZGrid, long long nSourcesRegZGrid, long long *sourcesPositionRegXZGrid, long long nSourcesRegXZGrid, long long *sourcesPositionRegXYGrid, long long nSourcesRegXYGrid, long long *sourcesPositionRegYZGrid, long long nSourcesRegYZGrid, long long *receiversPositionRegCenterGrid, long long nReceiversRegCenterGrid, long long *receiversPositionRegXGrid, long long nReceiversRegXGrid, long long *receiversPositionRegYGrid, long long nReceiversRegYGrid, long long *receiversPositionRegZGrid, long long nReceiversRegZGrid, long long *receiversPositionRegXZGrid, long long nReceiversRegXZGrid, long long *receiversPositionRegXYGrid, long long nReceiversRegXYGrid, long long *receiversPositionRegYZGrid, long long nReceiversRegYZGrid, int nx, int ny, int nz, int iGpu, int iGpuId) {
+
+	//setup: a) src and receiver positions allocation and copying to device
+	//       b) allocate and initialize (0) model (arrays for sources for each wavefield) to device
+	//       c) allocate and copy data (recevier recordings arrays) to device
+	//       d) allocate and copy wavefield time slices to gpu
+	setupAdjGpu_3D(modelRegDts_vx, modelRegDts_vy, modelRegDts_vz, modelRegDts_sigmaxx, modelRegDts_sigmayy, modelRegDts_sigmazz, modelRegDts_sigmaxz, modelRegDts_sigmaxy, modelRegDts_sigmayz, dataRegDts_vx, dataRegDts_vy, dataRegDts_vz, dataRegDts_sigmaxx, dataRegDts_sigmayy, dataRegDts_sigmazz, dataRegDts_sigmaxz, dataRegDts_sigmaxy, dataRegDts_sigmayz, sourcesPositionRegCenterGrid, nSourcesRegCenterGrid, sourcesPositionRegXGrid, nSourcesRegXGrid, sourcesPositionRegYGrid, nSourcesRegYGrid, sourcesPositionRegZGrid, nSourcesRegZGrid, sourcesPositionRegXZGrid, nSourcesRegXZGrid, sourcesPositionRegXYGrid, nSourcesRegXYGrid, sourcesPositionRegYZGrid, nSourcesRegYZGrid, receiversPositionRegCenterGrid, nReceiversRegCenterGrid, receiversPositionRegXGrid, nReceiversRegXGrid, receiversPositionRegYGrid, nReceiversRegYGrid, receiversPositionRegZGrid, nReceiversRegZGrid, receiversPositionRegXZGrid, nReceiversRegXZGrid, receiversPositionRegXYGrid, nReceiversRegXYGrid, receiversPositionRegYZGrid, nReceiversRegYZGrid, nx, ny, nz, iGpu, iGpuId);
+
+	//Finite-difference grid and blocks
+	int nblockx = (nz-2*FAT) / BLOCK_SIZE;
+	int nblocky = (nx-2*FAT) / BLOCK_SIZE;
+	dim3 dimGrid(nblockx, nblocky);
+	dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+
+	// Grid and block dimensions for data injection
+	// Injection grid size (data)
+	int nblockDataCenterGrid = (nReceiversRegCenterGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	int nblockDataXGrid = (nReceiversRegXGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	int nblockDataYGrid = (nReceiversRegYGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	int nblockDataZGrid = (nReceiversRegZGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	int nblockDataXZGrid = (nReceiversRegXZGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	int nblockDataXYGrid = (nReceiversRegXYGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	int nblockDataYZGrid = (nReceiversRegYZGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	// Extraction grid size (source)
+	int nblockSouCenterGrid = (nSourcesRegCenterGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	int nblockSouXGrid = (nSourcesRegXGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	int nblockSouYGrid = (nSourcesRegYGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	int nblockSouZGrid = (nSourcesRegZGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	int nblockSouXZGrid = (nSourcesRegXZGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	int nblockSouXYGrid = (nSourcesRegXYGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+	int nblockSouYZGrid = (nSourcesRegYZGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
+
+	for (int its = host_nts-2; its > -1; its--){
+			for (int it2 = host_sub-1; it2 > -1; it2--){
+					// Compute fine time-step index
+					// int itw = its * host_sub + it2;
+					
+					// Step adjoint
+					launchAdjStepKernels_3D(dimGrid, dimBlock, nx, ny, nz, iGpu);
+					// Inject and interpolate data
+					launchAdjInterpInjectDataKernels_3D(nblockDataCenterGrid, nblockDataXGrid, nblockDataYGrid, nblockDataZGrid, nblockDataXZGrid, nblockDataXYGrid, nblockDataYZGrid, nReceiversRegCenterGrid, nReceiversRegXGrid, nReceiversRegYGrid, nReceiversRegZGrid, nReceiversRegXZGrid, nReceiversRegXYGrid, nReceiversRegYZGrid, its, it2, iGpu);
+					// Damp wavefields
+					launchDampCosineEdgeKernels_3D(dimGrid, dimBlock, nx, ny, nz, iGpu);
+					// Extract and interpolate source
+					launchAdjExtractSource_3D(nblockSouCenterGrid, nblockSouXGrid, nblockSouYGrid, nblockSouZGrid,nblockSouXZGrid, nblockSouXYGrid, nblockSouYZGrid, nSourcesRegCenterGrid, nSourcesRegXGrid, nSourcesRegYGrid, nSourcesRegZGrid, nSourcesRegXZGrid, nSourcesRegXYGrid, nSourcesRegYZGrid, its, it2, iGpu);
+					// Switch pointers
+					switchPointers_3D(iGpu);
+
+			}
+	}
+
+	// Copy model back to host
+	cuda_call(cudaMemcpy(modelRegDts_vx, dev_modelRegDts_vx[iGpu], nSourcesRegXGrid*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+	cuda_call(cudaMemcpy(modelRegDts_vy, dev_modelRegDts_vy[iGpu], nSourcesRegYGrid*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+	cuda_call(cudaMemcpy(modelRegDts_vz, dev_modelRegDts_vz[iGpu], nSourcesRegZGrid*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+	cuda_call(cudaMemcpy(modelRegDts_sigmaxx, dev_modelRegDts_sigmaxx[iGpu], nSourcesRegCenterGrid*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+	cuda_call(cudaMemcpy(modelRegDts_sigmayy, dev_modelRegDts_sigmayy[iGpu], nSourcesRegCenterGrid*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+	cuda_call(cudaMemcpy(modelRegDts_sigmazz, dev_modelRegDts_sigmazz[iGpu], nSourcesRegCenterGrid*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+	cuda_call(cudaMemcpy(modelRegDts_sigmaxz, dev_modelRegDts_sigmaxz[iGpu], nSourcesRegXZGrid*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+	cuda_call(cudaMemcpy(modelRegDts_sigmaxy, dev_modelRegDts_sigmaxy[iGpu], nSourcesRegXYGrid*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+	cuda_call(cudaMemcpy(modelRegDts_sigmayz, dev_modelRegDts_sigmayz[iGpu], nSourcesRegYZGrid*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
+
+
+	// Deallocate all slices
+	cuda_call(cudaFree(dev_modelRegDts_vx[iGpu]));
+	cuda_call(cudaFree(dev_modelRegDts_vy[iGpu]));
+	cuda_call(cudaFree(dev_modelRegDts_vz[iGpu]));
+	cuda_call(cudaFree(dev_modelRegDts_sigmaxx[iGpu]));
+	cuda_call(cudaFree(dev_modelRegDts_sigmayy[iGpu]));
+	cuda_call(cudaFree(dev_modelRegDts_sigmazz[iGpu]));
+	cuda_call(cudaFree(dev_modelRegDts_sigmaxz[iGpu]));
+	cuda_call(cudaFree(dev_modelRegDts_sigmaxy[iGpu]));
+	cuda_call(cudaFree(dev_modelRegDts_sigmayz[iGpu]));
+
+	cuda_call(cudaFree(dev_dataRegDts_vx[iGpu]));
+	cuda_call(cudaFree(dev_dataRegDts_vy[iGpu]));
+	cuda_call(cudaFree(dev_dataRegDts_vz[iGpu]));
+	cuda_call(cudaFree(dev_dataRegDts_sigmaxx[iGpu]));
+	cuda_call(cudaFree(dev_dataRegDts_sigmayy[iGpu]));
+	cuda_call(cudaFree(dev_dataRegDts_sigmazz[iGpu]));
+	cuda_call(cudaFree(dev_dataRegDts_sigmaxz[iGpu]));
+	cuda_call(cudaFree(dev_dataRegDts_sigmaxy[iGpu]));
+	cuda_call(cudaFree(dev_dataRegDts_sigmayz[iGpu]));
+
+	cuda_call(cudaFree(dev_sourcesPositionRegCenterGrid[iGpu]));
+	cuda_call(cudaFree(dev_sourcesPositionRegXGrid[iGpu]));
+	cuda_call(cudaFree(dev_sourcesPositionRegYGrid[iGpu]));
+	cuda_call(cudaFree(dev_sourcesPositionRegZGrid[iGpu]));
+	cuda_call(cudaFree(dev_sourcesPositionRegXZGrid[iGpu]));
+	cuda_call(cudaFree(dev_sourcesPositionRegXYGrid[iGpu]));
+	cuda_call(cudaFree(dev_sourcesPositionRegYZGrid[iGpu]));
+
+	cuda_call(cudaFree(dev_receiversPositionRegCenterGrid[iGpu]));
+	cuda_call(cudaFree(dev_receiversPositionRegXGrid[iGpu]));
+	cuda_call(cudaFree(dev_receiversPositionRegYGrid[iGpu]));
+	cuda_call(cudaFree(dev_receiversPositionRegZGrid[iGpu]));
+	cuda_call(cudaFree(dev_receiversPositionRegXZGrid[iGpu]));
+	cuda_call(cudaFree(dev_receiversPositionRegXYGrid[iGpu]));
+	cuda_call(cudaFree(dev_receiversPositionRegYZGrid[iGpu]));
+}
 
 
 
