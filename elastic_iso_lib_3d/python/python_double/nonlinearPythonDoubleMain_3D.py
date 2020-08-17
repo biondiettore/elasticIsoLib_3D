@@ -75,45 +75,44 @@ if __name__ == '__main__':
 		print("------------------ Running Python nonlinear adjoint ---------------")
 		print("-------------------------------------------------------------------\n")
 
-		raise NotImplementError("ERROR! Adjoint operator not implemented yet")
-
-		# # Check that model was provided
-		# modelFile=parObject.getString("model","noModelFile")
-		# if (modelFile == "noModelFile"):
-		# 	raise IOError("**** ERROR: User did not provide model file ****\n")
-		# dataFile=parObject.getString("data","noDataFile")
-		# if (dataFile == "noDataFile"):
-		# 	raise IOError("**** ERROR: User did not provide data file name ****\n")
-		#
-		# #Reading model
-		# dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=4)
-		# dataDMat=dataDouble.getNdArray()
-		# dataSMat=dataFloat.getNdArray()
-		# dataDMat[:]=dataSMat
-		#
-		# #check if we want to save wavefield
-		# if (parObject.getInt("saveWavefield",0) == 1):
-		# 	wfldFile=parObject.getString("wfldFile","noWfldFile")
-		# 	if (wfldFile == "noWfldFile"):
-		# 		raise IOError("**** ERROR: User specified saveWavefield=1 but did not provide wavefield file name (wfldFile)****")
-		# 	#run Nonlinear adjoint with wavefield saving
-		# 	nonlinearElasticOp.adjointWavefield(False,modelDouble,dataDouble)
-		# 	#save wavefield to disk
-		# 	wavefieldDouble = nonlinearElasticOp.getWavefield()
-		# 	wavefieldFloat=SepVector.getSepVector(wavefieldDouble.getHyper(),storage="dataFloat")
-		# 	wavefieldFloatNp=wavefieldFloat.getNdArray()
-		# 	wavefieldDoubleNp=wavefieldDouble.getNdArray()
-		# 	wavefieldFloatNp[:]=wavefieldDoubleNp
-		# 	genericIO.defaultIO.writeVector(wfldFile,wavefieldFloat)
-		# else:
-		# 	#run Nonlinear forward without wavefield saving
-		# 	nonlinearElasticOp.forward(False,modelDouble,dataDouble)
-		# #write data to disk
-		# modelFloat=SepVector.getSepVector(modelDouble.getHyper(),storage="dataFloat")
-		# modelFloatNp=modelFloat.getNdArray()
-		# modelDoubleNp=modelDouble.getNdArray()
-		# modelFloatNp[:]=modelDoubleNp
-		# modelFloat.writeVec(modelFile)
+		# Check that model was provided
+		modelFile=parObject.getString("model","noModelFile")
+		if (modelFile == "noModelFile"):
+			raise IOError("**** ERROR: User did not provide model file ****\n")
+		dataFile=parObject.getString("data","noDataFile")
+		if (dataFile == "noDataFile"):
+			raise IOError("**** ERROR: User did not provide data file name ****\n")
+		
+		#Reading model
+		dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=4)
+		dataDMat=dataDouble.getNdArray()
+		dataSMat=dataFloat.getNdArray()
+		dataDMat[:]=dataSMat
+		
+		#check if we want to save wavefield
+		if (parObject.getInt("saveWavefield",0) == 1):
+			raise NotImplementError("ERROR! saveWavefield option not supported yet")
+			# wfldFile=parObject.getString("wfldFile","noWfldFile")
+			# if (wfldFile == "noWfldFile"):
+			# 	raise IOError("**** ERROR: User specified saveWavefield=1 but did not provide wavefield file name (wfldFile)****")
+			# #run Nonlinear adjoint with wavefield saving
+			# nonlinearElasticOp.adjointWavefield(False,modelDouble,dataDouble)
+			# #save wavefield to disk
+			# wavefieldDouble = nonlinearElasticOp.getWavefield()
+			# wavefieldFloat=SepVector.getSepVector(wavefieldDouble.getHyper(),storage="dataFloat")
+			# wavefieldFloatNp=wavefieldFloat.getNdArray()
+			# wavefieldDoubleNp=wavefieldDouble.getNdArray()
+			# wavefieldFloatNp[:]=wavefieldDoubleNp
+			# genericIO.defaultIO.writeVector(wfldFile,wavefieldFloat)
+		else:
+			#run Nonlinear forward without wavefield saving
+			nonlinearElasticOp.forward(False,modelDouble,dataDouble)
+		#write data to disk
+		modelFloat=SepVector.getSepVector(modelDouble.getHyper(),storage="dataFloat")
+		modelFloatNp=modelFloat.getNdArray()
+		modelDoubleNp=modelDouble.getNdArray()
+		modelFloatNp[:]=modelDoubleNp
+		modelFloat.writeVec(modelFile)
 
 		print("-------------------------------------------------------------------")
 		print("--------------------------- All done ------------------------------")
