@@ -369,15 +369,15 @@ class nonlinearPropElasticShotsGpu_3D(Op.Operator):
 	# 		self.pyOp.forwardWavefield(add,model,data)
 	# 	return
 
-	# def adjoint(self,add,model,data):
-	# 	#Checking if getCpp is present
-	# 	if("getCpp" in dir(model)):
-	# 		model = model.getCpp()
-	# 	if("getCpp" in dir(data)):
-	# 		data = data.getCpp()
-	# 	with pyElastic_iso_double_nl_3D.ostream_redirect():
-	# 		self.pyOp.adjoint(add,model,data)
-	# 	return
+	def adjoint(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyElastic_iso_double_nl_3D.ostream_redirect():
+			self.pyOp.adjoint(add,model,data)
+		return
 
 	# def adjointWavefield(self,add,model,data):
 	# 	#Checking if getCpp is present

@@ -82,13 +82,13 @@ if __name__ == '__main__':
 		dataFile=parObject.getString("data","noDataFile")
 		if (dataFile == "noDataFile"):
 			raise IOError("**** ERROR: User did not provide data file name ****\n")
-		
+
 		#Reading model
 		dataFloat=genericIO.defaultIO.getVector(dataFile,ndims=4)
 		dataDMat=dataDouble.getNdArray()
 		dataSMat=dataFloat.getNdArray()
 		dataDMat[:]=dataSMat
-		
+
 		#check if we want to save wavefield
 		if (parObject.getInt("saveWavefield",0) == 1):
 			raise NotImplementError("ERROR! saveWavefield option not supported yet")
@@ -106,7 +106,7 @@ if __name__ == '__main__':
 			# genericIO.defaultIO.writeVector(wfldFile,wavefieldFloat)
 		else:
 			#run Nonlinear forward without wavefield saving
-			nonlinearElasticOp.forward(False,modelDouble,dataDouble)
+			nonlinearElasticOp.adjoint(False,modelDouble,dataDouble)
 		#write data to disk
 		modelFloat=SepVector.getSepVector(modelDouble.getHyper(),storage="dataFloat")
 		modelFloatNp=modelFloat.getNdArray()
