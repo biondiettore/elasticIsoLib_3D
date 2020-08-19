@@ -93,7 +93,8 @@ void initNonlinearElasticGpu_3D(double dz, double dx, double dy, int nz, int nx,
 		host_nz = nz;
 		host_nx = nx;
 		host_ny = ny;
-		host_nModel = nz * nx * ny;
+		host_nModel = nz;
+		host_nModel *= nx * ny;
 		host_yStride = nz * nx;
 		host_nts = nts;
 		host_sub = sub;
@@ -659,8 +660,6 @@ void switchPointers_3D(int iGpu){
 /************************************************/
 void launchFwdStepKernels_3D(dim3 dimGrid, dim3 dimBlock, int nx, int ny, int nz, int iGpu){
 		kernel_exec(stepFwdGpu_3D<<<dimGrid, dimBlock>>>(dev_p0_vx[iGpu], dev_p0_vy[iGpu], dev_p0_vz[iGpu], dev_p0_sigmaxx[iGpu], dev_p0_sigmayy[iGpu], dev_p0_sigmazz[iGpu], dev_p0_sigmaxz[iGpu], dev_p0_sigmaxy[iGpu], dev_p0_sigmayz[iGpu], dev_p1_vx[iGpu], dev_p1_vy[iGpu], dev_p1_vz[iGpu], dev_p1_sigmaxx[iGpu], dev_p1_sigmayy[iGpu], dev_p1_sigmazz[iGpu], dev_p1_sigmaxz[iGpu], dev_p1_sigmaxy[iGpu], dev_p1_sigmayz[iGpu], dev_p0_vx[iGpu], dev_p0_vy[iGpu], dev_p0_vz[iGpu], dev_p0_sigmaxx[iGpu], dev_p0_sigmayy[iGpu], dev_p0_sigmazz[iGpu], dev_p0_sigmaxz[iGpu], dev_p0_sigmaxy[iGpu], dev_p0_sigmayz[iGpu], dev_rhoxDtw[iGpu], dev_rhoyDtw[iGpu], dev_rhozDtw[iGpu], dev_lamb2MuDtw[iGpu], dev_lambDtw[iGpu], dev_muxzDtw[iGpu], dev_muxyDtw[iGpu], dev_muyzDtw[iGpu], nx, ny, nz));
-		// kernel_exec(stepFwdGpu_vel_3D<<<dimGrid, dimBlock>>>(dev_p0_vx[iGpu], dev_p0_vy[iGpu], dev_p0_vz[iGpu], dev_p0_sigmaxx[iGpu], dev_p0_sigmayy[iGpu], dev_p0_sigmazz[iGpu], dev_p0_sigmaxz[iGpu], dev_p0_sigmaxy[iGpu], dev_p0_sigmayz[iGpu], dev_p1_vx[iGpu], dev_p1_vy[iGpu], dev_p1_vz[iGpu], dev_p1_sigmaxx[iGpu], dev_p1_sigmayy[iGpu], dev_p1_sigmazz[iGpu], dev_p1_sigmaxz[iGpu], dev_p1_sigmaxy[iGpu], dev_p1_sigmayz[iGpu], dev_p0_vx[iGpu], dev_p0_vy[iGpu], dev_p0_vz[iGpu], dev_p0_sigmaxx[iGpu], dev_p0_sigmayy[iGpu], dev_p0_sigmazz[iGpu], dev_p0_sigmaxz[iGpu], dev_p0_sigmaxy[iGpu], dev_p0_sigmayz[iGpu], dev_rhoxDtw[iGpu], dev_rhoyDtw[iGpu], dev_rhozDtw[iGpu], dev_lamb2MuDtw[iGpu], dev_lambDtw[iGpu], dev_muxzDtw[iGpu], dev_muxyDtw[iGpu], dev_muyzDtw[iGpu], nx, ny, nz));
-		// kernel_exec(stepFwdGpu_stress_3D<<<dimGrid, dimBlock>>>(dev_p0_vx[iGpu], dev_p0_vy[iGpu], dev_p0_vz[iGpu], dev_p0_sigmaxx[iGpu], dev_p0_sigmayy[iGpu], dev_p0_sigmazz[iGpu], dev_p0_sigmaxz[iGpu], dev_p0_sigmaxy[iGpu], dev_p0_sigmayz[iGpu], dev_p1_vx[iGpu], dev_p1_vy[iGpu], dev_p1_vz[iGpu], dev_p1_sigmaxx[iGpu], dev_p1_sigmayy[iGpu], dev_p1_sigmazz[iGpu], dev_p1_sigmaxz[iGpu], dev_p1_sigmaxy[iGpu], dev_p1_sigmayz[iGpu], dev_p0_vx[iGpu], dev_p0_vy[iGpu], dev_p0_vz[iGpu], dev_p0_sigmaxx[iGpu], dev_p0_sigmayy[iGpu], dev_p0_sigmazz[iGpu], dev_p0_sigmaxz[iGpu], dev_p0_sigmaxy[iGpu], dev_p0_sigmayz[iGpu], dev_rhoxDtw[iGpu], dev_rhoyDtw[iGpu], dev_rhozDtw[iGpu], dev_lamb2MuDtw[iGpu], dev_lambDtw[iGpu], dev_muxzDtw[iGpu], dev_muxyDtw[iGpu], dev_muyzDtw[iGpu], nx, ny, nz));
 }
 
 void launchFwdInjectSourceKernels_3D(int nblockSouCenterGrid, int nblockSouXGrid, int nblockSouYGrid, int nblockSouZGrid, int nblockSouXZGrid, int nblockSouXYGrid, int nblockSouYZGrid, long long nSourcesRegCenterGrid, long long nSourcesRegXGrid, long long nSourcesRegYGrid, long long nSourcesRegZGrid, long long nSourcesRegXZGrid, long long nSourcesRegXYGrid, long long nSourcesRegYZGrid, int its, int it2, int iGpu){
@@ -743,7 +742,7 @@ void launchAdjExtractSource_3D(int nblockSouCenterGrid, int nblockSouXGrid, int 
 	// Mxy
 	kernel_exec(ker_record_source_xyGrid_3D<<<nblockSouXYGrid, BLOCK_SIZE_DATA>>>(dev_p0_sigmaxy[iGpu], dev_modelRegDts_sigmaxy[iGpu], its, it2, dev_sourcesPositionRegXYGrid[iGpu], nSourcesRegXYGrid));
 	// Myz
-	kernel_exec(ker_inject_source_yzGrid_3D<<<nblockSouYZGrid, BLOCK_SIZE_DATA>>>(dev_p0_sigmayz[iGpu], dev_modelRegDts_sigmayz[iGpu], its, it2, dev_sourcesPositionRegYZGrid[iGpu], nSourcesRegYZGrid));
+	kernel_exec(ker_record_source_yzGrid_3D<<<nblockSouYZGrid, BLOCK_SIZE_DATA>>>(dev_p0_sigmayz[iGpu], dev_modelRegDts_sigmayz[iGpu], its, it2, dev_sourcesPositionRegYZGrid[iGpu], nSourcesRegYZGrid));
 
 }
 
@@ -792,7 +791,6 @@ void propElasticFwdGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double
 				// std::cout << "its = " << its << std::endl;
 				for (int it2 = 1; it2 < host_sub+1; it2++){
 						// Compute fine time-step index
-						// int itw = its * host_sub + it2;
 
 							// Step forward
 							launchFwdStepKernels_3D(dimGrid, dimBlock, nx, ny, nz, iGpu);
@@ -894,8 +892,7 @@ void propElasticAdjGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double
 	for (int its = host_nts-2; its > -1; its--){
 			for (int it2 = host_sub-1; it2 > -1; it2--){
 					// Compute fine time-step index
-					// int itw = its * host_sub + it2;
-					
+
 					// Step adjoint
 					launchAdjStepKernels_3D(dimGrid, dimBlock, nx, ny, nz, iGpu);
 					// Inject and interpolate data
@@ -903,7 +900,7 @@ void propElasticAdjGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double
 					// Damp wavefields
 					launchDampCosineEdgeKernels_3D(dimGrid, dimBlock, nx, ny, nz, iGpu);
 					// Extract and interpolate source
-					launchAdjExtractSource_3D(nblockSouCenterGrid, nblockSouXGrid, nblockSouYGrid, nblockSouZGrid,nblockSouXZGrid, nblockSouXYGrid, nblockSouYZGrid, nSourcesRegCenterGrid, nSourcesRegXGrid, nSourcesRegYGrid, nSourcesRegZGrid, nSourcesRegXZGrid, nSourcesRegXYGrid, nSourcesRegYZGrid, its, it2, iGpu);
+					launchAdjExtractSource_3D(nblockSouCenterGrid, nblockSouXGrid, nblockSouYGrid, nblockSouZGrid, nblockSouXZGrid, nblockSouXYGrid, nblockSouYZGrid, nSourcesRegCenterGrid, nSourcesRegXGrid, nSourcesRegYGrid, nSourcesRegZGrid, nSourcesRegXZGrid, nSourcesRegXYGrid, nSourcesRegYZGrid, its, it2, iGpu);
 					// Switch pointers
 					switchPointers_3D(iGpu);
 
