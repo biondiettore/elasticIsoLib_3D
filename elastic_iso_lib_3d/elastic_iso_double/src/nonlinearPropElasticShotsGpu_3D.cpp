@@ -10,7 +10,7 @@ nonlinearPropElasticShotsGpu_3D::nonlinearPropElasticShotsGpu_3D(std::shared_ptr
   	_elasticParam = elasticParam;
   	_nExp = par->getInt("nExp");
 		_ginsu = par->getInt("ginsu",0);
-		_domDec = par->getInt("_domDec",0);
+		_domDec = par->getInt("domDec",0);
 		createGpuIdList_3D();
   	_info = par->getInt("info", 0);
   	_deviceNumberInfo = par->getInt("deviceNumberInfo", 0);
@@ -77,7 +77,7 @@ void nonlinearPropElasticShotsGpu_3D::createGpuIdList_3D(){
 	}
 
 	// Check that the user does not ask for more GPUs than shots to be modeled
-	if (_nGpu > _nExp){std::cout << "**** ERROR [nonlinearPropElasticShotsGpu_3D]: User required more GPUs than shots to be modeled ****" << std::endl; throw std::runtime_error("");}
+	if (_nGpu > _nExp && _domDec == 0){std::cout << "**** ERROR [nonlinearPropElasticShotsGpu_3D]: User required more GPUs than shots to be modeled ****" << std::endl; throw std::runtime_error("");}
 
 	// Allocation of arrays of arrays will be done by the gpu # _gpuList[0]
 	_iGpuAlloc = _gpuList[0];
