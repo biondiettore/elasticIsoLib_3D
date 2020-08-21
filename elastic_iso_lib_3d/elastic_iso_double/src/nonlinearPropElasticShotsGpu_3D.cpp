@@ -40,6 +40,39 @@ nonlinearPropElasticShotsGpu_3D::nonlinearPropElasticShotsGpu_3D(std::shared_ptr
 
     _fdParamElastic = std::make_shared<fdParamElastic_3D>(_elasticParam, _par);
 
+		// Creating domain decomposition information
+		if (_domDec == 1){
+			if (_nGpu == 1){
+				throw std::runtime_error("ERROR![nonlinearPropElasticShotsGpu_3D] Cannot use domain decomposition on single card!");
+			}
+			int ny = _fdParamElastic->_ny;
+			int yPad = _fdParamElastic->_yPad;
+			int fat = _par->getInt("fat",4);
+			int ny_chunk = ny/_nGpu;
+			if (ny_chunk < fat){
+				throw std::runtime_error("ERROR![nonlinearPropElasticShotsGpu_3D] Decomposition strategy not feasible with ny size; Use less cards");
+			}
+			if (_info == 1){
+				std::cout << "Using domain decomposition with " << _nGpu << " GPUs with ny sizes of: ";
+			}
+			for (int iGpu=0; iGpu < _nGpu; iGpu++){
+				int ny_size;
+				if (iGpu == 0){
+					ny_size = ny_chunk+fat;
+				} else if (iGpu == _nGpu-1) {
+					ny_size = ny - ny_chunk*(_nGpu-1)+fat;
+				} else {
+					ny_size = ny_chunk+2*fat;
+				}
+				_ny_domDec.push_back(ny_size);
+			}
+			if (_info == 1){
+				for (int iGpu=0; iGpu < _nGpu; iGpu++){std::cout << _ny_domDec[iGpu] << " ";}
+				std::cout << std::endl;
+			}
+
+		}
+
 }
 
 void nonlinearPropElasticShotsGpu_3D::createGpuIdList_3D(){
@@ -86,102 +119,182 @@ void nonlinearPropElasticShotsGpu_3D::createGpuIdList_3D(){
 void nonlinearPropElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<double4DReg> model, std::shared_ptr<double4DReg> data) const{
 	if (!add) data->scale(0.0);
 
-	// Variable declaration
-	int omp_get_thread_num();
-	int constantSrcSignal, constantRecGeom;
+	if (_domDec == 0){
+		// Not using domain decomposition
+		// Variable declaration
+		int omp_get_thread_num();
+		int constantSrcSignal, constantRecGeom;
 
-	//check that we have five wavefield componenets
-	if (model->getHyper()->getAxis(3).n != 9) {
-		throw std::runtime_error("**** ERROR [nonlinearPropElasticShotsGpu_3D]: Number of components in source model different than 9 (fx,fy,fz,mxx,myy,mzz,mxz,mxy,myz) ****");
-	}
+		//check that we have five wavefield componenets
+		if (model->getHyper()->getAxis(3).n != 9) {
+			throw std::runtime_error("**** ERROR [nonlinearPropElasticShotsGpu_3D]: Number of components in source model different than 9 (fx,fy,fz,mxx,myy,mzz,mxz,mxy,myz) ****");
+		}
 
-	// Check whether we use the same source signals for all shots
-	if (model->getHyper()->getAxis(4).n == 1) {constantSrcSignal = 1;}
-	else {constantSrcSignal=0;}
+		// Check whether we use the same source signals for all shots
+		if (model->getHyper()->getAxis(4).n == 1) {constantSrcSignal = 1;}
+		else {constantSrcSignal=0;}
 
-	// Check if we have constant receiver geometry. If _receiversVectorCenterGrid size==1 then all receiver vectors should be as well.
-	if (_receiversVectorCenterGrid.size() == 1) {constantRecGeom=1;}
-	else {constantRecGeom=0;}
+		// Check if we have constant receiver geometry. If _receiversVectorCenterGrid size==1 then all receiver vectors should be as well.
+		if (_receiversVectorCenterGrid.size() == 1) {constantRecGeom=1;}
+		else {constantRecGeom=0;}
 
-	// Create vectors for each GPU
-	std::shared_ptr<SEP::hypercube> hyperModelSlices(new hypercube(model->getHyper()->getAxis(1), model->getHyper()->getAxis(2), model->getHyper()->getAxis(3)));
-	std::shared_ptr<SEP::hypercube> hyperDataSlices(new hypercube(data->getHyper()->getAxis(1), data->getHyper()->getAxis(2), data->getHyper()->getAxis(3)));
-	std::vector<std::shared_ptr<double3DReg>> modelSlicesVector;
-	std::vector<std::shared_ptr<double3DReg>> dataSlicesVector;
-	std::vector<std::shared_ptr<nonlinearPropElasticGpu_3D>> propObjectVector;
+		// Create vectors for each GPU
+		std::shared_ptr<SEP::hypercube> hyperModelSlices(new hypercube(model->getHyper()->getAxis(1), model->getHyper()->getAxis(2), model->getHyper()->getAxis(3)));
+		std::shared_ptr<SEP::hypercube> hyperDataSlices(new hypercube(data->getHyper()->getAxis(1), data->getHyper()->getAxis(2), data->getHyper()->getAxis(3)));
+		std::vector<std::shared_ptr<double3DReg>> modelSlicesVector;
+		std::vector<std::shared_ptr<double3DReg>> dataSlicesVector;
+		std::vector<std::shared_ptr<nonlinearPropElasticGpu_3D>> propObjectVector;
 
-	// Initialization for each GPU:
-	// (1) Creation of vector of objects, model, and data.
-	// (2) Memory allocation on GPU
-	for (int iGpu=0; iGpu<_nGpu; iGpu++){
+		// Initialization for each GPU:
+		// (1) Creation of vector of objects, model, and data.
+		// (2) Memory allocation on GPU
+		for (int iGpu=0; iGpu<_nGpu; iGpu++){
+
+			// Nonlinear propagator object
+			std::shared_ptr<nonlinearPropElasticGpu_3D> propGpuObject(new nonlinearPropElasticGpu_3D(_fdParamElastic, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
+			propObjectVector.push_back(propGpuObject);
+
+			// Display finite-difference parameters info
+			if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
+				propGpuObject->getFdParam_3D()->getInfo_3D();
+			}
+
+			// Model slice
+			std::shared_ptr<SEP::double3DReg> modelSlices(new SEP::double3DReg(hyperModelSlices));
+			modelSlicesVector.push_back(modelSlices);
+
+			// Data slice
+			std::shared_ptr<SEP::double3DReg> dataSlices(new SEP::double3DReg(hyperDataSlices));
+			dataSlicesVector.push_back(dataSlices);
+
+		}
+
+		// Launch nonlinear forward
+
+		//will loop over number of experiments in parallel. each thread launching one experiment at a time on one gpu.
+		#pragma omp parallel for schedule(dynamic,1) num_threads(_nGpu)
+		for (int iExp=0; iExp<_nExp; iExp++){
+
+			int iGpu = omp_get_thread_num();
+			int iGpuId = _gpuList[iGpu];
+
+			// Copy model slice
+			long long sourceLength;
+			sourceLength = hyperModelSlices->getAxis(1).n*hyperModelSlices->getAxis(2).n;
+			sourceLength *= hyperModelSlices->getAxis(3).n;
+			if(constantSrcSignal == 1) {
+				memcpy(modelSlicesVector[iGpu]->getVals(), &(model->getVals()[0]), sizeof(double)*sourceLength);
+			} else {
+				memcpy(modelSlicesVector[iGpu]->getVals(), &(model->getVals()[iExp*sourceLength]), sizeof(double)*sourceLength);
+			}
+			// Set acquisition geometry
+			if (constantRecGeom == 1) {
+				propObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+			} else {
+				propObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+			}
+
+			// Set GPU number for propagator object
+			propObjectVector[iGpu]->setGpuNumber_3D(iGpu,iGpuId);
+
+			//Launch modeling
+			propObjectVector[iGpu]->forward(false, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+
+			// Store dataSlice into data
+			#pragma omp parallel for collapse(3)
+			for (int iwc=0; iwc<hyperDataSlices->getAxis(3).n; iwc++){ // wavefield component
+				for (int iReceiver=0; iReceiver<hyperDataSlices->getAxis(2).n; iReceiver++){
+					for (int its=0; its<hyperDataSlices->getAxis(1).n; its++){
+						(*data->_mat)[iExp][iwc][iReceiver][its] += (*dataSlicesVector[iGpu]->_mat)[iwc][iReceiver][its];
+					}
+				}
+			}
+
+		}
+
+		// Deallocate memory on device
+		for (int iGpu=0; iGpu<_nGpu; iGpu++){
+			deallocateNonlinearElasticGpu_3D(iGpu,_gpuList[iGpu]);
+		}
+
+	} else {
+		// Using domain decomposition
+		// Variable declaration
+		int constantSrcSignal, constantRecGeom;
+
+		//check that we have five wavefield componenets
+		if (model->getHyper()->getAxis(3).n != 9) {
+			throw std::runtime_error("**** ERROR [nonlinearPropElasticShotsGpu_3D]: Number of components in source model different than 9 (fx,fy,fz,mxx,myy,mzz,mxz,mxy,myz) ****");
+		}
+
+		// Check whether we use the same source signals for all shots
+		if (model->getHyper()->getAxis(4).n == 1) {constantSrcSignal = 1;}
+		else {constantSrcSignal=0;}
+
+		// Check if we have constant receiver geometry. If _receiversVectorCenterGrid size==1 then all receiver vectors should be as well.
+		if (_receiversVectorCenterGrid.size() == 1) {constantRecGeom=1;}
+		else {constantRecGeom=0;}
+
+		// Create temporary model and data slices
+		std::shared_ptr<SEP::hypercube> hyperModelSlice(new hypercube(model->getHyper()->getAxis(1), model->getHyper()->getAxis(2), model->getHyper()->getAxis(3)));
+		std::shared_ptr<SEP::hypercube> hyperDataSlice(new hypercube(data->getHyper()->getAxis(1), data->getHyper()->getAxis(2), data->getHyper()->getAxis(3)));
+		// Model slice
+		std::shared_ptr<double3DReg> modelSlice(new SEP::double3DReg(hyperModelSlice));
+		// Data slice
+		std::shared_ptr<double3DReg> dataSlice(new SEP::double3DReg(hyperDataSlice));
 
 		// Nonlinear propagator object
-		std::shared_ptr<nonlinearPropElasticGpu_3D> propGpuObject(new nonlinearPropElasticGpu_3D(_fdParamElastic, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
-		propObjectVector.push_back(propGpuObject);
+		std::shared_ptr<nonlinearPropElasticGpu_3D> propGpuObject(new nonlinearPropElasticGpu_3D(_fdParamElastic, _par, _nGpu, _gpuList, _iGpuAlloc, _ny_domDec));
+
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
+		if ((_info == 1)){
 			propGpuObject->getFdParam_3D()->getInfo_3D();
 		}
 
-		// Model slice
-		std::shared_ptr<SEP::double3DReg> modelSlices(new SEP::double3DReg(hyperModelSlices));
-		modelSlicesVector.push_back(modelSlices);
+		// Launch nonlinear forward
 
-		// Data slice
-		std::shared_ptr<SEP::double3DReg> dataSlices(new SEP::double3DReg(hyperDataSlices));
-		dataSlicesVector.push_back(dataSlices);
+		//will loop over number of experiments
+		for (int iExp=0; iExp<_nExp; iExp++){
 
-	}
+			// Copy model slice
+			long long sourceLength;
+			sourceLength = hyperModelSlice->getAxis(1).n*hyperModelSlice->getAxis(2).n;
+			sourceLength *= hyperModelSlice->getAxis(3).n;
+			if(constantSrcSignal == 1) {
+				memcpy(modelSlice->getVals(), &(model->getVals()[0]), sizeof(double)*sourceLength);
+			} else {
+				memcpy(modelSlice->getVals(), &(model->getVals()[iExp*sourceLength]), sizeof(double)*sourceLength);
+			}
+			// Set acquisition geometry
+			if (constantRecGeom == 1) {
+				propGpuObject->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlice, dataSlice);
+			} else {
+				propGpuObject->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlice, dataSlice);
+			}
 
-	// Launch nonlinear forward
 
-	//will loop over number of experiments in parallel. each thread launching one experiment at a time on one gpu.
-	#pragma omp parallel for schedule(dynamic,1) num_threads(_nGpu)
-	for (int iExp=0; iExp<_nExp; iExp++){
+			//Launch modeling
+			propGpuObject->forward(false, modelSlice, dataSlice);
 
-		int iGpu = omp_get_thread_num();
-		int iGpuId = _gpuList[iGpu];
-
-		// Copy model slice
-		long long sourceLength;
-		sourceLength = hyperModelSlices->getAxis(1).n*hyperModelSlices->getAxis(2).n;
-		sourceLength *= hyperModelSlices->getAxis(3).n;
-		if(constantSrcSignal == 1) {
-			memcpy(modelSlicesVector[iGpu]->getVals(), &(model->getVals()[0]), sizeof(double)*sourceLength);
-		} else {
-			memcpy(modelSlicesVector[iGpu]->getVals(), &(model->getVals()[iExp*sourceLength]), sizeof(double)*sourceLength);
-		}
-		// Set acquisition geometry
-		if (constantRecGeom == 1) {
-			propObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
-		} else {
-			propObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
-		}
-
-		// Set GPU number for propagator object
-		propObjectVector[iGpu]->setGpuNumber_3D(iGpu,iGpuId);
-
-		//Launch modeling
-		propObjectVector[iGpu]->forward(false, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
-
-		// Store dataSlice into data
-		#pragma omp parallel for collapse(3)
-		for (int iwc=0; iwc<hyperDataSlices->getAxis(3).n; iwc++){ // wavefield component
-			for (int iReceiver=0; iReceiver<hyperDataSlices->getAxis(2).n; iReceiver++){
-				for (int its=0; its<hyperDataSlices->getAxis(1).n; its++){
-					(*data->_mat)[iExp][iwc][iReceiver][its] += (*dataSlicesVector[iGpu]->_mat)[iwc][iReceiver][its];
+			// Store dataSlice into data
+			#pragma omp parallel for collapse(3)
+			for (int iwc=0; iwc<hyperDataSlice->getAxis(3).n; iwc++){ // wavefield component
+				for (int iReceiver=0; iReceiver<hyperDataSlice->getAxis(2).n; iReceiver++){
+					for (int its=0; its<hyperDataSlice->getAxis(1).n; its++){
+						(*data->_mat)[iExp][iwc][iReceiver][its] += (*dataSlice->_mat)[iwc][iReceiver][its];
+					}
 				}
 			}
+
+		}
+
+		// Deallocate memory on device
+		for (int iGpu=0; iGpu<_nGpu; iGpu++){
+			deallocateNonlinearElasticGpu_3D(iGpu,_gpuList[iGpu]);
 		}
 
 	}
-
-	// Deallocate memory on device
-	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateNonlinearElasticGpu_3D(iGpu,_gpuList[iGpu]);
-	}
-
 }
 
 void nonlinearPropElasticShotsGpu_3D::adjoint(const bool add, const std::shared_ptr<double4DReg> model, std::shared_ptr<double4DReg> data) const{

@@ -13,6 +13,7 @@
 #include "fdParamElastic_3D.h"
 #include "seismicElasticOperator3D.h"
 #include "nonlinearPropElasticGpuFunctions_3D.h"
+#include <vector>
 
 using namespace SEP;
 //! Propogates one elastic wavefield for one shot on one gpu.
@@ -28,6 +29,8 @@ class nonlinearPropElasticGpu_3D : public seismicElasticOperator3D<SEP::double3D
 	public:
     //! Constructor.
 		nonlinearPropElasticGpu_3D(std::shared_ptr<fdParamElastic_3D> fdParamElastic, std::shared_ptr<paramObj> par, int nGpu, int iGpu, int iGpuId, int iGpuAlloc);
+		//! Constructor for domain decomposition
+		nonlinearPropElasticGpu_3D(std::shared_ptr<fdParamElastic_3D> fdParamElastic, std::shared_ptr<paramObj> par, int nGpu, std::vector<int> gpuList, int iGpuAlloc, std::vector<int> ny_domDec);
 
 		//! Mutators.
 		void setAllWavefields_3D(int wavefieldFlag);

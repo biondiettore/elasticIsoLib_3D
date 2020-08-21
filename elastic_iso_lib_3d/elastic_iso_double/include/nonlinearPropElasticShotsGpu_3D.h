@@ -25,7 +25,7 @@ class nonlinearPropElasticShotsGpu_3D : public Operator<SEP::double4DReg, SEP::d
 		std::vector<std::shared_ptr<spaceInterpGpu_3D>> _sourcesVectorCenterGrid, _sourcesVectorXGrid, _sourcesVectorYGrid, _sourcesVectorZGrid, _sourcesVectorXZGrid, _sourcesVectorXYGrid, _sourcesVectorYZGrid;
 		std::vector<std::shared_ptr<spaceInterpGpu_3D>> _receiversVectorCenterGrid, _receiversVectorXGrid, _receiversVectorYGrid, _receiversVectorZGrid, _receiversVectorXZGrid, _receiversVectorXYGrid, _receiversVectorYZGrid;
 		std::shared_ptr<fdParamElastic_3D> _fdParamElastic;
-		std::vector<int> _gpuList;
+		std::vector<int> _gpuList, _ny_domDec;
 	protected:
 		std::shared_ptr<SEP::double5DReg> _wavefield;
 

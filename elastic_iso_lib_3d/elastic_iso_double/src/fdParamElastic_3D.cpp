@@ -15,12 +15,12 @@ fdParamElastic_3D::fdParamElastic_3D(const std::shared_ptr<double4DReg> elasticP
 	_elasticParam = elasticParam; //[rho; lambda; mu] [0; 1; 2]
 	_par = par;
 
-	/***** Coarse time-sampling *****/
-	_freeSurface = _par->getInt("freeSurface",0);
+	/***** Other parameters *****/
+	_freeSurface = _par->getInt("freeSurface", 0);
 
 	/***** Coarse time-sampling *****/
 	_nts = _par->getInt("nts");
-	_dts = _par->getFloat("dts",0.0);
+	_dts = _par->getFloat("dts", 0.0);
 	_ots = _par->getFloat("ots", 0.0);
 	_sub = _par->getInt("sub");
 	_timeAxisCoarse = axis(_nts, _ots, _dts);
@@ -57,7 +57,7 @@ fdParamElastic_3D::fdParamElastic_3D(const std::shared_ptr<double4DReg> elasticP
 	_ox = _elasticParam->getHyper()->getAxis(2).o;
 	_xAxis = axis(_nx, _ox, _dx);
 
-	/***** Horizontal x axis *****/
+	/***** Horizontal y axis *****/
 	_ny = _par->getInt("ny");
 	_yPad = _par->getInt("yPad");
 	_dy = _par->getFloat("dy",-1.0);

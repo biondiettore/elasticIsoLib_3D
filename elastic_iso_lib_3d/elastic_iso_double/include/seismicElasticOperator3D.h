@@ -9,6 +9,7 @@
 #include "fdParamElastic_3D.h"
 #include "spaceInterpGpu_3D.h"
 #include <omp.h>
+#include <vector>
 
 using namespace SEP;
 
@@ -30,6 +31,7 @@ class seismicElasticOperator3D : public Operator <V1, V2> {
 		int _saveWavefield,_useStreams;
 		int _iGpu, _nGpu, _iGpuId;
 		int _domDec, _freeSurface;
+		std::vector<int> _gpuList, _ny_domDec;
 
     //these variables hold all five components of elastic source signal. Should be a 3d reg
 		std::shared_ptr<V2> _sourcesSignals;

@@ -83,6 +83,33 @@ bool getGpuInfo_3D(std::vector<int> gpuList, int info, int deviceNumberInfo){
 
 	return true;
 }
+// GPU P2P setup
+// Setup_cuda checks there enough GPUs, and sets up the communication pipelines for future GPU-GPU transfers
+void setGpuP2P(int nGpu, int info, std::vector<int> gpuList){
+
+  for(int iGpu=0; iGpu<nGpu; iGpu++){
+    cudaDeviceSynchronize();
+    cudaSetDevice(gpuList[iGpu]);
+
+    //Enable P2P memcopies between GPUs
+    for(int jGpu=0; jGpu<nGpu; jGpu++){
+      if(iGpu==jGpu) continue;
+      int peer_access_available=0;
+      cudaDeviceCanAccessPeer( &peer_access_available, gpuList[iGpu], gpuList[jGpu]);
+      if(peer_access_available){
+        cudaDeviceEnablePeerAccess(gpuList[jGpu],0);
+      } else {
+				if (info == 1) {
+					std::cout << "GPUid: " << gpuList[iGpu] << "cannot access GPUid:" << gpuList[jGpu] << std::endl;
+				}
+			}
+    }
+
+  }
+
+}
+
+
 // Setting common parameters
 void initNonlinearElasticGpu_3D(double dz, double dx, double dy, int nz, int nx, int ny, int nts, double dts, int sub, int minPad, int blockSize, double alphaCos, int nGpu, int iGpuId, int iGpuAlloc){
 
@@ -754,7 +781,7 @@ void launchAdjExtractSource_3D(int nblockSouCenterGrid, int nblockSouXGrid, int 
 /****************************************************************************************/
 /******************************* Nonlinear forward propagation **************************/
 /****************************************************************************************/
-void propElasticFwdGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double *modelRegDts_vz, double *modelRegDts_sigmaxx, double *modelRegDts_sigmayy, double *modelRegDts_sigmazz, double *modelRegDts_sigmaxz, double *modelRegDts_sigmaxy, double *modelRegDts_sigmayz, double *dataRegDts_vx, double *dataRegDts_vy, double *dataRegDts_vz, double *dataRegDts_sigmaxx, double *dataRegDts_sigmayy, double *dataRegDts_sigmazz, double *dataRegDts_sigmaxz, double *dataRegDts_sigmaxy, double *dataRegDts_sigmayz, long long *sourcesPositionRegCenterGrid, long long nSourcesRegCenterGrid, long long *sourcesPositionRegXGrid, long long nSourcesRegXGrid, long long *sourcesPositionRegYGrid, long long nSourcesRegYGrid, long long *sourcesPositionRegZGrid, long long nSourcesRegZGrid, long long *sourcesPositionRegXZGrid, long long nSourcesRegXZGrid, long long *sourcesPositionRegXYGrid, long long nSourcesRegXYGrid, long long *sourcesPositionRegYZGrid, long long nSourcesRegYZGrid, long long *receiversPositionRegCenterGrid, long long nReceiversRegCenterGrid, long long *receiversPositionRegXGrid, long long nReceiversRegXGrid, long long *receiversPositionRegYGrid, long long nReceiversRegYGrid, long long *receiversPositionRegZGrid, long long nReceiversRegZGrid, long long *receiversPositionRegXZGrid, long long nReceiversRegXZGrid, long long *receiversPositionRegXYGrid, long long nReceiversRegXYGrid, long long *receiversPositionRegYZGrid, long long nReceiversRegYZGrid, int nx, int ny, int nz, int iGpu, int iGpuId) {
+void propElasticFwdGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double *modelRegDts_vz, double *modelRegDts_sigmaxx, double *modelRegDts_sigmayy, double *modelRegDts_sigmazz, double *modelRegDts_sigmaxz, double *modelRegDts_sigmaxy, double *modelRegDts_sigmayz, double *dataRegDts_vx, double *dataRegDts_vy, double *dataRegDts_vz, double *dataRegDts_sigmaxx, double *dataRegDts_sigmayy, double *dataRegDts_sigmazz, double *dataRegDts_sigmaxz, double *dataRegDts_sigmaxy, double *dataRegDts_sigmayz, long long *sourcesPositionRegCenterGrid, long long nSourcesRegCenterGrid, long long *sourcesPositionRegXGrid, long long nSourcesRegXGrid, long long *sourcesPositionRegYGrid, long long nSourcesRegYGrid, long long *sourcesPositionRegZGrid, long long nSourcesRegZGrid, long long *sourcesPositionRegXZGrid, long long nSourcesRegXZGrid, long long *sourcesPositionRegXYGrid, long long nSourcesRegXYGrid, long long *sourcesPositionRegYZGrid, long long nSourcesRegYZGrid, long long *receiversPositionRegCenterGrid, long long nReceiversRegCenterGrid, long long *receiversPositionRegXGrid, long long nReceiversRegXGrid, long long *receiversPositionRegYGrid, long long nReceiversRegYGrid, long long *receiversPositionRegZGrid, long long nReceiversRegZGrid, long long *receiversPositionRegXZGrid, long long nReceiversRegXZGrid, long long *receiversPositionRegXYGrid, long long nReceiversRegXYGrid, long long *receiversPositionRegYZGrid, long long nReceiversRegYZGrid, int nx, int ny, int nz, int iGpu, int iGpuId){
 
 
 		//setup: a) src and receiver positions allocation and copying to device
@@ -853,6 +880,32 @@ void propElasticFwdGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double
 		cuda_call(cudaFree(dev_receiversPositionRegXZGrid[iGpu]));
 		cuda_call(cudaFree(dev_receiversPositionRegXYGrid[iGpu]));
 		cuda_call(cudaFree(dev_receiversPositionRegYZGrid[iGpu]));
+
+}
+void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, double *modelRegDts_vz, double *modelRegDts_sigmaxx, double *modelRegDts_sigmayy, double *modelRegDts_sigmazz, double *modelRegDts_sigmaxz, double *modelRegDts_sigmaxy, double *modelRegDts_sigmayz, double *dataRegDts_vx, double *dataRegDts_vy, double *dataRegDts_vz, double *dataRegDts_sigmaxx, double *dataRegDts_sigmayy, double *dataRegDts_sigmazz, double *dataRegDts_sigmaxz, double *dataRegDts_sigmaxy, double *dataRegDts_sigmayz, long long *sourcesPositionRegCenterGrid, long long nSourcesRegCenterGrid, long long *sourcesPositionRegXGrid, long long nSourcesRegXGrid, long long *sourcesPositionRegYGrid, long long nSourcesRegYGrid, long long *sourcesPositionRegZGrid, long long nSourcesRegZGrid, long long *sourcesPositionRegXZGrid, long long nSourcesRegXZGrid, long long *sourcesPositionRegXYGrid, long long nSourcesRegXYGrid, long long *sourcesPositionRegYZGrid, long long nSourcesRegYZGrid, long long *receiversPositionRegCenterGrid, long long nReceiversRegCenterGrid, long long *receiversPositionRegXGrid, long long nReceiversRegXGrid, long long *receiversPositionRegYGrid, long long nReceiversRegYGrid, long long *receiversPositionRegZGrid, long long nReceiversRegZGrid, long long *receiversPositionRegXZGrid, long long nReceiversRegXZGrid, long long *receiversPositionRegXYGrid, long long nReceiversRegXYGrid, long long *receiversPositionRegYZGrid, long long nReceiversRegYZGrid, int nx, int ny, int nz, std::vector<int> gpuList){
+
+	// Number of GPUs employed
+	int nGpu = gpuList.size();
+	//Define separate streams for overlapping communication
+  cudaStream_t haloStream[nGpu], bodyStream[nGpu];
+
+	//Setup coordinate systems for internal domains
+  // int offset_internal[n_gpus];
+  // int start3[n_gpus],end3[n_gpus];
+
+  for(int iGpu=0; iGpu<nGpu; iGpu++){
+    cudaSetDevice(gpuList[iGpu]);
+    cudaStreamCreate(&haloStream[iGpu]);
+    cudaStreamCreate(&bodyStream[iGpu]);
+
+    //Offset_internal is the initial index of our internal domain (out of stencil padding)
+    // offset_internal[i]=offset;
+    // if(i > 0) offset_internal[i] += n1*n2*radius;
+		//
+    // start3[i] = i*(n3-2*radius) + 2*radius;
+    // end3[i] = (i+1)*(n3-2*radius) /*- radius*/;
+
+  }
 
 }
 
