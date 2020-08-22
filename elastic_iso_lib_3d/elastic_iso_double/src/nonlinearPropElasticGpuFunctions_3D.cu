@@ -3,6 +3,7 @@
 #include "nonlinearPropElasticGpuFunctions_3D.h"
 #include "varElaDeclare_3D.h"
 #include "kernelsElaGpu_3D.cu"
+#include "kernelsElaGpudomDec_3D.cu"
 #include "cudaErrors_3D.cu"
 #include <vector>
 #include <algorithm>
