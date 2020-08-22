@@ -49,7 +49,8 @@ nonlinearPropElasticShotsGpu_3D::nonlinearPropElasticShotsGpu_3D(std::shared_ptr
 			int yPad = _fdParamElastic->_yPad;
 			int fat = _par->getInt("fat",4);
 			int ny_chunk = ny/_nGpu;
-			if (ny_chunk < fat){
+			if (ny_chunk <= 3*fat && _nGpu > 2 || ny_chunk <= 2*fat && _nGpu == 2){
+				//We must have at least one sample in the internal part
 				throw std::runtime_error("ERROR![nonlinearPropElasticShotsGpu_3D] Decomposition strategy not feasible with ny size; Use less cards");
 			}
 			if (_info == 1){

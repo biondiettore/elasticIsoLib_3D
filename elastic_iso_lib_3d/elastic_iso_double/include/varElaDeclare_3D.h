@@ -60,12 +60,6 @@
 	double **dev_rhoxDtw, **dev_rhoyDtw, **dev_rhozDtw, **dev_lamb2MuDtw, **dev_lambDtw, **dev_muxzDtw, **dev_muxyDtw, **dev_muyzDtw; // Precomputed scaled properties
 
 	/************************************* HOST DECLARATION *********************************/
-	long long host_nx; // Includes padding + FAT
-	long long host_ny;
-	long long host_nz;
-	long long host_yStride;
-	unsigned long long host_nModel;
-
 	double host_dx;
 	double host_dy;
 	double host_dz;
@@ -74,6 +68,7 @@
 	double host_dts;
 	int host_ntw;
 	int host_sub;
+	int host_minPad;
 
 
 
