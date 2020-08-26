@@ -45,7 +45,7 @@ class nonlinearPropElasticGpu_3D : public seismicElasticOperator3D<SEP::double3D
 		void adjoint(const bool add, std::shared_ptr<double3DReg> model, const std::shared_ptr<double3DReg> data) const;
 
 		//! Desctructor
-		~nonlinearPropElasticGpu_3D(){};
+		~nonlinearPropElasticGpu_3D(){deallocateInit();};
 
 		//! Accesor
 		std::shared_ptr<double5DReg> getWavefield_3D() { return _wavefield; }

@@ -48,8 +48,6 @@ nonlinearPropElasticGpu_3D::nonlinearPropElasticGpu_3D(std::shared_ptr<fdParamEl
 		//Going back by 2*fat since the overlap between domains
 		shift = yStride*(_ny_domDec[iGpu]-2*_fdParamElastic->_fat);
 	}
-	//Enable P2P memcpy
-	setGpuP2P(_nGpu, par->getInt("info", 0), _gpuList);
 
 	setAllWavefields_3D(0); // By default, do not record the scattered wavefields
 }
@@ -565,7 +563,7 @@ void nonlinearPropElasticGpu_3D::adjoint(const bool add, const std::shared_ptr<d
 	if (_domDec == 0){
 		propElasticAdjGpu_3D(modelRegDts_vx->getVals(), modelRegDts_vy->getVals(), modelRegDts_vz->getVals(), modelRegDts_sigmaxx->getVals(), modelRegDts_sigmayy->getVals(), modelRegDts_sigmazz->getVals(), modelRegDts_sigmaxz->getVals(), modelRegDts_sigmaxy->getVals(), modelRegDts_sigmayz->getVals(), dataRegDts_vx->getVals(), dataRegDts_vy->getVals(), dataRegDts_vz->getVals(), dataRegDts_sigmaxx->getVals(), dataRegDts_sigmayy->getVals(), dataRegDts_sigmazz->getVals(), dataRegDts_sigmaxz->getVals(), dataRegDts_sigmaxy->getVals(), dataRegDts_sigmayz->getVals(), _sourcesPositionRegCenterGrid, _nSourcesRegCenterGrid, _sourcesPositionRegXGrid, _nSourcesRegXGrid, _sourcesPositionRegYGrid, _nSourcesRegYGrid, _sourcesPositionRegZGrid, _nSourcesRegZGrid, _sourcesPositionRegXZGrid, _nSourcesRegXZGrid, _sourcesPositionRegXYGrid, _nSourcesRegXYGrid, _sourcesPositionRegYZGrid, _nSourcesRegYZGrid, _receiversPositionRegCenterGrid, _nReceiversRegCenterGrid, _receiversPositionRegXGrid, _nReceiversRegXGrid, _receiversPositionRegYGrid, _nReceiversRegYGrid, _receiversPositionRegZGrid, _nReceiversRegZGrid, _receiversPositionRegXZGrid, _nReceiversRegXZGrid, _receiversPositionRegXYGrid, _nReceiversRegXYGrid, _receiversPositionRegYZGrid, _nReceiversRegYZGrid, _fdParamElastic->_nx, _fdParamElastic->_ny, _fdParamElastic->_nz, _iGpu, _iGpuId);
 	} else {
-		throw std::runtime_error("ERROR! Domain decomposition not implemented yet!");
+		propElasticAdjGpudomDec_3D(modelRegDts_vx->getVals(), modelRegDts_vy->getVals(), modelRegDts_vz->getVals(), modelRegDts_sigmaxx->getVals(), modelRegDts_sigmayy->getVals(), modelRegDts_sigmazz->getVals(), modelRegDts_sigmaxz->getVals(), modelRegDts_sigmaxy->getVals(), modelRegDts_sigmayz->getVals(), dataRegDts_vx->getVals(), dataRegDts_vy->getVals(), dataRegDts_vz->getVals(), dataRegDts_sigmaxx->getVals(), dataRegDts_sigmayy->getVals(), dataRegDts_sigmazz->getVals(), dataRegDts_sigmaxz->getVals(), dataRegDts_sigmaxy->getVals(), dataRegDts_sigmayz->getVals(), _sourcesPositionRegCenterGrid, _nSourcesRegCenterGrid, _sourcesPositionRegXGrid, _nSourcesRegXGrid, _sourcesPositionRegYGrid, _nSourcesRegYGrid, _sourcesPositionRegZGrid, _nSourcesRegZGrid, _sourcesPositionRegXZGrid, _nSourcesRegXZGrid, _sourcesPositionRegXYGrid, _nSourcesRegXYGrid, _sourcesPositionRegYZGrid, _nSourcesRegYZGrid, _receiversPositionRegCenterGrid, _nReceiversRegCenterGrid, _receiversPositionRegXGrid, _nReceiversRegXGrid, _receiversPositionRegYGrid, _nReceiversRegYGrid, _receiversPositionRegZGrid, _nReceiversRegZGrid, _receiversPositionRegXZGrid, _nReceiversRegXZGrid, _receiversPositionRegXYGrid, _nReceiversRegXYGrid, _receiversPositionRegYZGrid, _nReceiversRegYZGrid, _fdParamElastic->_nx, _fdParamElastic->_ny, _fdParamElastic->_nz, _ny_domDec, _gpuList);
 	}
 
 	/* Interpolate model (seismic source) to regular grid */

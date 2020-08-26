@@ -71,6 +71,8 @@ nonlinearPropElasticShotsGpu_3D::nonlinearPropElasticShotsGpu_3D(std::shared_ptr
 				for (int iGpu=0; iGpu < _nGpu; iGpu++){std::cout << _ny_domDec[iGpu] << " ";}
 				std::cout << std::endl;
 			}
+			//Enable P2P memcpy
+			setGpuP2P(_nGpu, par->getInt("info", 0), _gpuList);
 
 		}
 
@@ -302,115 +304,207 @@ void nonlinearPropElasticShotsGpu_3D::adjoint(const bool add, const std::shared_
 
 	if (!add) model->scale(0.0);
 
-	// Variable declaration
-	int omp_get_thread_num();
-	int constantSrcSignal, constantRecGeom;
+	if (_domDec == 0){
+		// Variable declaration
+		int omp_get_thread_num();
+		int constantSrcSignal, constantRecGeom;
 
-	//check that we have five wavefield componenets
-	if (model->getHyper()->getAxis(3).n != 9) {
-		throw std::runtime_error("**** ERROR [nonlinearPropElasticShotsGpu_3D]: Number of components in source model different than 9 (fx,fy,fz,mxx,myy,mzz,mxz,mxy,myz) ****");
-	}
+		//check that we have five wavefield componenets
+		if (model->getHyper()->getAxis(3).n != 9) {
+			throw std::runtime_error("**** ERROR [nonlinearPropElasticShotsGpu_3D]: Number of components in source model different than 9 (fx,fy,fz,mxx,myy,mzz,mxz,mxy,myz) ****");
+		}
 
-	// Check whether we use the same source signals for all shots
-	if (model->getHyper()->getAxis(4).n == 1) {constantSrcSignal = 1;}
-	else {constantSrcSignal=0;}
+		// Check whether we use the same source signals for all shots
+		if (model->getHyper()->getAxis(4).n == 1) {constantSrcSignal = 1;}
+		else {constantSrcSignal=0;}
 
-	// Check if we have constant receiver geometry. If _receiversVectorCenterGrid size==1 then all receiver vectors should be as well.
-	if (_receiversVectorCenterGrid.size() == 1) {constantRecGeom=1;}
-	else {constantRecGeom=0;}
+		// Check if we have constant receiver geometry. If _receiversVectorCenterGrid size==1 then all receiver vectors should be as well.
+		if (_receiversVectorCenterGrid.size() == 1) {constantRecGeom=1;}
+		else {constantRecGeom=0;}
 
-	// Create vectors for each GPU
-	std::shared_ptr<SEP::hypercube> hyperModelSlices(new hypercube(model->getHyper()->getAxis(1), model->getHyper()->getAxis(2), model->getHyper()->getAxis(3)));
-	std::shared_ptr<SEP::hypercube> hyperDataSlices(new hypercube(data->getHyper()->getAxis(1), data->getHyper()->getAxis(2), data->getHyper()->getAxis(3)));
-	std::vector<std::shared_ptr<double3DReg>> modelSlicesVector;
-	std::vector<std::shared_ptr<double3DReg>> dataSlicesVector;
-	std::vector<std::shared_ptr<nonlinearPropElasticGpu_3D>> propObjectVector;
+		// Create vectors for each GPU
+		std::shared_ptr<SEP::hypercube> hyperModelSlices(new hypercube(model->getHyper()->getAxis(1), model->getHyper()->getAxis(2), model->getHyper()->getAxis(3)));
+		std::shared_ptr<SEP::hypercube> hyperDataSlices(new hypercube(data->getHyper()->getAxis(1), data->getHyper()->getAxis(2), data->getHyper()->getAxis(3)));
+		std::vector<std::shared_ptr<double3DReg>> modelSlicesVector;
+		std::vector<std::shared_ptr<double3DReg>> dataSlicesVector;
+		std::vector<std::shared_ptr<nonlinearPropElasticGpu_3D>> propObjectVector;
 
-	// Initialization for each GPU:
-	// (1) Creation of vector of objects, model, and data.
-	// (2) Memory allocation on GPU
-	for (int iGpu=0; iGpu<_nGpu; iGpu++){
+		// Initialization for each GPU:
+		// (1) Creation of vector of objects, model, and data.
+		// (2) Memory allocation on GPU
+		for (int iGpu=0; iGpu<_nGpu; iGpu++){
+
+			// Nonlinear propagator object
+			std::shared_ptr<nonlinearPropElasticGpu_3D> propGpuObject(new nonlinearPropElasticGpu_3D(_fdParamElastic, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
+			propObjectVector.push_back(propGpuObject);
+
+			// Display finite-difference parameters info
+			if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
+				propGpuObject->getFdParam_3D()->getInfo_3D();
+			}
+
+			// Model slice
+			std::shared_ptr<SEP::double3DReg> modelSlices(new SEP::double3DReg(hyperModelSlices));
+			modelSlicesVector.push_back(modelSlices);
+
+			// Data slice
+			std::shared_ptr<SEP::double3DReg> dataSlices(new SEP::double3DReg(hyperDataSlices));
+			dataSlicesVector.push_back(dataSlices);
+
+		}
+
+		// Launch nonlinear adjoint
+
+		//will loop over number of experiments in parallel. each thread launching one experiment at a time on one gpu.
+		#pragma omp parallel for schedule(dynamic,1) num_threads(_nGpu)
+		for (int iExp=0; iExp<_nExp; iExp++){
+
+			int iGpu = omp_get_thread_num();
+			int iGpuId = _gpuList[iGpu];
+
+			// Copy model slice
+			long long dataLength = hyperDataSlices->getAxis(1).n*hyperDataSlices->getAxis(2).n;
+			dataLength *= hyperDataSlices->getAxis(3).n;
+			// Copy data slice
+	    memcpy(dataSlicesVector[iGpu]->getVals(), &(data->getVals()[iExp*dataLength]), sizeof(double)*dataLength);
+			// Set acquisition geometry
+			if (constantRecGeom == 1) {
+				propObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+			} else {
+				propObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+			}
+
+			// Set GPU number for propagator object
+			propObjectVector[iGpu]->setGpuNumber_3D(iGpu,iGpuId);
+
+			// Launch modeling
+	      if (constantSrcSignal == 1){
+	      	// Stack all shots for the same iGpu (and we need to re-stack everything at the end)
+	        propObjectVector[iGpu]->adjoint(true, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+	      }
+	      else {
+	        // Copy the shot into model slice --> Is there a way to parallelize this?
+	        propObjectVector[iGpu]->adjoint(false, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+	        #pragma omp parallel for collapse(3)
+	        for (int iwc=0; iwc<hyperDataSlices->getAxis(3).n; iwc++){ // wavefield component
+	          for (int iSource=0; iSource<hyperModelSlices->getAxis(2).n; iSource++){
+	            for (int its=0; its<hyperModelSlices->getAxis(1).n; its++){
+	            	(*model->_mat)[iExp][iwc][iSource][its] += (*modelSlicesVector[iGpu]->_mat)[iwc][iSource][its];
+	            }
+	          }
+	        }
+	      }
+
+		}
+
+		// If same sources for all shots, stack all shots from all iGpus
+	    if (constantSrcSignal == 1){
+	      #pragma omp parallel for collapse(4)
+	      for (int iwc=0; iwc<hyperDataSlices->getAxis(3).n; iwc++){ // wavefield component
+	      	for (int iSource=0; iSource<hyperModelSlices->getAxis(2).n; iSource++){
+	      		for (int its=0; its<hyperModelSlices->getAxis(1).n; its++){
+	      			for (int iGpu=0; iGpu<_nGpu; iGpu++){
+	      				(*model->_mat)[0][iwc][iSource][its]	+= (*modelSlicesVector[iGpu]->_mat)[iwc][iSource][its];
+	      			}
+	      		}
+	      	}
+	      }
+	    }
+
+		// Deallocate memory on device
+		for (int iGpu=0; iGpu<_nGpu; iGpu++){
+			deallocateNonlinearElasticGpu_3D(iGpu,_gpuList[iGpu]);
+		}
+	} else {
+		// Variable declaration
+		int omp_get_thread_num();
+		int constantSrcSignal, constantRecGeom;
+
+		//check that we have five wavefield componenets
+		if (model->getHyper()->getAxis(3).n != 9) {
+			throw std::runtime_error("**** ERROR [nonlinearPropElasticShotsGpu_3D]: Number of components in source model different than 9 (fx,fy,fz,mxx,myy,mzz,mxz,mxy,myz) ****");
+		}
+
+		// Check whether we use the same source signals for all shots
+		if (model->getHyper()->getAxis(4).n == 1) {constantSrcSignal = 1;}
+		else {constantSrcSignal=0;}
+
+		// Check if we have constant receiver geometry. If _receiversVectorCenterGrid size==1 then all receiver vectors should be as well.
+		if (_receiversVectorCenterGrid.size() == 1) {constantRecGeom=1;}
+		else {constantRecGeom=0;}
+
+		// Create temporary model and data slices
+		std::shared_ptr<SEP::hypercube> hyperModelSlice(new hypercube(model->getHyper()->getAxis(1), model->getHyper()->getAxis(2), model->getHyper()->getAxis(3)));
+		std::shared_ptr<SEP::hypercube> hyperDataSlice(new hypercube(data->getHyper()->getAxis(1), data->getHyper()->getAxis(2), data->getHyper()->getAxis(3)));
+		// Model slice
+		std::shared_ptr<double3DReg> modelSlice(new SEP::double3DReg(hyperModelSlice));
+		// Data slice
+		std::shared_ptr<double3DReg> dataSlice(new SEP::double3DReg(hyperDataSlice));
 
 		// Nonlinear propagator object
-		std::shared_ptr<nonlinearPropElasticGpu_3D> propGpuObject(new nonlinearPropElasticGpu_3D(_fdParamElastic, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
-		propObjectVector.push_back(propGpuObject);
+		std::shared_ptr<nonlinearPropElasticGpu_3D> propGpuObject(new nonlinearPropElasticGpu_3D(_fdParamElastic, _par, _nGpu, _gpuList, _iGpuAlloc, _ny_domDec));
 
 		// Display finite-difference parameters info
-		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
+		if ((_info == 1)){
 			propGpuObject->getFdParam_3D()->getInfo_3D();
 		}
 
-		// Model slice
-		std::shared_ptr<SEP::double3DReg> modelSlices(new SEP::double3DReg(hyperModelSlices));
-		modelSlicesVector.push_back(modelSlices);
+		// Launch nonlinear adjoint
 
-		// Data slice
-		std::shared_ptr<SEP::double3DReg> dataSlices(new SEP::double3DReg(hyperDataSlices));
-		dataSlicesVector.push_back(dataSlices);
+		//will loop over number of experiments in parallel. each thread launching one experiment at a time on one gpu.
+		for (int iExp=0; iExp<_nExp; iExp++){
 
-	}
+			int iGpu = omp_get_thread_num();
+			int iGpuId = _gpuList[iGpu];
 
-	// Launch nonlinear forward
+			// Copy model slice
+			long long dataLength = hyperDataSlice->getAxis(1).n*hyperDataSlice->getAxis(2).n;
+			dataLength *= hyperDataSlice->getAxis(3).n;
+			// Copy data slice
+	    memcpy(dataSlice->getVals(), &(data->getVals()[iExp*dataLength]), sizeof(double)*dataLength);
+			// Set acquisition geometry
+			if (constantRecGeom == 1) {
+				propGpuObject->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlice, dataSlice);
+			} else {
+				propGpuObject->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlice, dataSlice);
+			}
 
-	//will loop over number of experiments in parallel. each thread launching one experiment at a time on one gpu.
-	#pragma omp parallel for schedule(dynamic,1) num_threads(_nGpu)
-	for (int iExp=0; iExp<_nExp; iExp++){
+			// Launch modeling
+	      if (constantSrcSignal == 1){
+	      	// Stack all shots for the same iGpu (and we need to re-stack everything at the end)
+	        propGpuObject->adjoint(true, modelSlice, dataSlice);
+	      }
+	      else {
+	        // Copy the shot into model slice --> Is there a way to parallelize this?
+	        propGpuObject->adjoint(false, modelSlice, dataSlice);
+	        #pragma omp parallel for collapse(3)
+	        for (int iwc=0; iwc<hyperDataSlice->getAxis(3).n; iwc++){ // wavefield component
+	          for (int iSource=0; iSource<hyperModelSlice->getAxis(2).n; iSource++){
+	            for (int its=0; its<hyperModelSlice->getAxis(1).n; its++){
+	            	(*model->_mat)[iExp][iwc][iSource][its] += (*modelSlice->_mat)[iwc][iSource][its];
+	            }
+	          }
+	        }
+	      }
 
-		int iGpu = omp_get_thread_num();
-		int iGpuId = _gpuList[iGpu];
-
-		// Copy model slice
-		long long dataLength = hyperDataSlices->getAxis(1).n*hyperDataSlices->getAxis(2).n;
-		dataLength *= hyperDataSlices->getAxis(3).n;
-		// Copy data slice
-    memcpy(dataSlicesVector[iGpu]->getVals(), &(data->getVals()[iExp*dataLength]), sizeof(double)*dataLength);
-		// Set acquisition geometry
-		if (constantRecGeom == 1) {
-			propObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
-		} else {
-			propObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
 		}
 
-		// Set GPU number for propagator object
-		propObjectVector[iGpu]->setGpuNumber_3D(iGpu,iGpuId);
-
-		// Launch modeling
-      if (constantSrcSignal == 1){
-      	// Stack all shots for the same iGpu (and we need to re-stack everything at the end)
-        propObjectVector[iGpu]->adjoint(true, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
-      }
-      else {
-        // Copy the shot into model slice --> Is there a way to parallelize this?
-        propObjectVector[iGpu]->adjoint(false, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
-        #pragma omp parallel for collapse(3)
-        for (int iwc=0; iwc<hyperDataSlices->getAxis(3).n; iwc++){ // wavefield component
-          for (int iSource=0; iSource<hyperModelSlices->getAxis(2).n; iSource++){
-            for (int its=0; its<hyperModelSlices->getAxis(1).n; its++){
-            	(*model->_mat)[iExp][iwc][iSource][its] += (*modelSlicesVector[iGpu]->_mat)[iwc][iSource][its];
-            }
-          }
-        }
-      }
-
-	}
-
-	// If same sources for all shots, stack all shots from all iGpus
+		// If same sources for all shots, stack all shots from all iGpus
     if (constantSrcSignal == 1){
-      #pragma omp parallel for collapse(4)
-      for (int iwc=0; iwc<hyperDataSlices->getAxis(3).n; iwc++){ // wavefield component
-      	for (int iSource=0; iSource<hyperModelSlices->getAxis(2).n; iSource++){
-      		for (int its=0; its<hyperModelSlices->getAxis(1).n; its++){
-      			for (int iGpu=0; iGpu<_nGpu; iGpu++){
-      				(*model->_mat)[0][iwc][iSource][its]	+= (*modelSlicesVector[iGpu]->_mat)[iwc][iSource][its];
-      			}
+      #pragma omp parallel for collapse(3)
+      for (int iwc=0; iwc<hyperDataSlice->getAxis(3).n; iwc++){ // wavefield component
+      	for (int iSource=0; iSource<hyperModelSlice->getAxis(2).n; iSource++){
+      		for (int its=0; its<hyperModelSlice->getAxis(1).n; its++){
+      			(*model->_mat)[0][iwc][iSource][its]	+= (*modelSlice->_mat)[iwc][iSource][its];
       		}
       	}
       }
     }
 
-	// Deallocate memory on device
-	for (int iGpu=0; iGpu<_nGpu; iGpu++){
-		deallocateNonlinearElasticGpu_3D(iGpu,_gpuList[iGpu]);
+		// Deallocate memory on device
+		for (int iGpu=0; iGpu<_nGpu; iGpu++){
+			deallocateNonlinearElasticGpu_3D(iGpu,_gpuList[iGpu]);
+		}
 	}
 
 }
