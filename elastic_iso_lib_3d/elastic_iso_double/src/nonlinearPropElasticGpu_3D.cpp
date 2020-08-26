@@ -46,7 +46,7 @@ nonlinearPropElasticGpu_3D::nonlinearPropElasticGpu_3D(std::shared_ptr<fdParamEl
 
 		//Shifting part of the model to allocate on the GPUs
 		//Going back by 2*fat since the overlap between domains
-		shift = yStride*_ny_domDec[iGpu]-2*_fdParamElastic->_fat;
+		shift = yStride*(_ny_domDec[iGpu]-2*_fdParamElastic->_fat);
 	}
 	//Enable P2P memcpy
 	setGpuP2P(_nGpu, par->getInt("info", 0), _gpuList);

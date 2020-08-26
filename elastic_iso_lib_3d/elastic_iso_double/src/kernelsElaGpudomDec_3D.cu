@@ -7,54 +7,51 @@
 /*															SOURCE INJECTION      												*/
 // NORMAL STRESSES
 /* Interpolate and inject source on center grid */
-__global__ void ker_inject_source_centerGriddomDec_3D(double *dev_signalIn_sigmaxx, double *dev_signalIn_sigmayy, double *dev_signalIn_sigmazz, double *dev_timeSlice_sigmaxx, double *dev_timeSlice_sigmayy, double *dev_timeSlice_sigmazz, int its, int it2, long long *dev_sourcesPositionRegCenterGrid, long long nSourcesRegCenterGrid){
+__global__ void ker_inject_source_centerGriddomDec_3D(double *dev_signalIn_sigmaxx, double *dev_signalIn_sigmayy, double *dev_signalIn_sigmazz, double *dev_timeSlice_sigmaxx, double *dev_timeSlice_sigmayy, double *dev_timeSlice_sigmazz, int its, int it2, long long *dev_sourcesPositionRegCenterGrid, long long nSourcesRegCenterGrid, long long shift, long long min_idx, long long max_idx){
 
     //thread per source device
     long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
-		if (iThread < nSourcesRegCenterGrid) {
-			if (dev_sourcesPositionRegCenterGrid[iThread] >= 0) {
-				dev_timeSlice_sigmaxx[dev_sourcesPositionRegCenterGrid[iThread]] += dev_signalIn_sigmaxx[dev_nts*iThread+its] * dev_timeInterpFilter[it2] + dev_signalIn_sigmaxx[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
-				dev_timeSlice_sigmayy[dev_sourcesPositionRegCenterGrid[iThread]] += dev_signalIn_sigmayy[dev_nts*iThread+its] * dev_timeInterpFilter[it2] + dev_signalIn_sigmayy[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
-				dev_timeSlice_sigmazz[dev_sourcesPositionRegCenterGrid[iThread]] += dev_signalIn_sigmazz[dev_nts*iThread+its] * dev_timeInterpFilter[it2] + dev_signalIn_sigmazz[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
-			}
+		if (iThread < nSourcesRegCenterGrid && min_idx <= dev_sourcesPositionRegCenterGrid[iThread] && dev_sourcesPositionRegCenterGrid[iThread] < max_idx) {
+			long long idx = dev_sourcesPositionRegCenterGrid[iThread]-shift;
+			dev_timeSlice_sigmaxx[idx] += dev_signalIn_sigmaxx[dev_nts*iThread+its] * dev_timeInterpFilter[it2] + dev_signalIn_sigmaxx[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+			dev_timeSlice_sigmayy[idx] += dev_signalIn_sigmayy[dev_nts*iThread+its] * dev_timeInterpFilter[it2] + dev_signalIn_sigmayy[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+			dev_timeSlice_sigmazz[idx] += dev_signalIn_sigmazz[dev_nts*iThread+its] * dev_timeInterpFilter[it2] + dev_signalIn_sigmazz[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
 		}
 }
 //STAGGERED GRIDs
-__global__ void ker_inject_source_stagGriddomDec_3D(double *dev_signalIn, double *dev_timeSlice, int its, int it2, long long *dev_sourcesPositionRegGrid, long long nSourcesRegGrid){
+__global__ void ker_inject_source_stagGriddomDec_3D(double *dev_signalIn, double *dev_timeSlice, int its, int it2, long long *dev_sourcesPositionRegGrid, long long nSourcesRegGrid, long long shift, long long min_idx, long long max_idx){
 
     //thread per source device
     long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
-		if (iThread < nSourcesRegGrid) {
-			if (dev_sourcesPositionRegGrid[iThread] >= 0) {
-					dev_timeSlice[dev_sourcesPositionRegGrid[iThread]] += dev_signalIn[dev_nts*iThread+its] * dev_timeInterpFilter[it2] + dev_signalIn[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
-			}
+		// if (iThread == 0 && its == 0) {printf("dev_sourcesPositionRegGrid[iThread] = %d\n", dev_sourcesPositionRegGrid[iThread]);}
+		if (iThread < nSourcesRegGrid && min_idx <= dev_sourcesPositionRegGrid[iThread] && dev_sourcesPositionRegGrid[iThread] < max_idx) {
+			long long idx = dev_sourcesPositionRegGrid[iThread]-shift;
+			dev_timeSlice[idx] += dev_signalIn[dev_nts*iThread+its] * dev_timeInterpFilter[it2] + dev_signalIn[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
 		}
 }
 
 /*															DATA INJECTION      													*/
 // NORMAL STRESSES
 /* Interpolate and inject data on center grid */
-__global__ void ker_inject_data_centerGriddomDec_3D(double *dev_signalIn_sigmaxx, double *dev_signalIn_sigmayy, double *dev_signalIn_sigmazz, double *dev_timeSlice_sigmaxx, double *dev_timeSlice_sigmayy, double *dev_timeSlice_sigmazz, int its, int it2, long long *dev_receiversPositionRegCenterGrid, long long nReceiversRegCenterGrid){
+__global__ void ker_inject_data_centerGriddomDec_3D(double *dev_signalIn_sigmaxx, double *dev_signalIn_sigmayy, double *dev_signalIn_sigmazz, double *dev_timeSlice_sigmaxx, double *dev_timeSlice_sigmayy, double *dev_timeSlice_sigmazz, int its, int it2, long long *dev_receiversPositionRegCenterGrid, long long nReceiversRegCenterGrid, long long shift, long long min_idx, long long max_idx){
 
     //thread per receiver device
     long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
-		if (iThread < nReceiversRegCenterGrid) {
-			if (dev_receiversPositionRegCenterGrid[iThread] >= 0) {
-				dev_timeSlice_sigmaxx[dev_receiversPositionRegCenterGrid[iThread]] += dev_signalIn_sigmaxx[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmaxx[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
-				dev_timeSlice_sigmayy[dev_receiversPositionRegCenterGrid[iThread]] += dev_signalIn_sigmayy[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmayy[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
-				dev_timeSlice_sigmazz[dev_receiversPositionRegCenterGrid[iThread]] += dev_signalIn_sigmazz[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmazz[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
-			}
+		if (iThread < nReceiversRegCenterGrid && min_idx <= dev_receiversPositionRegCenterGrid[iThread] && dev_receiversPositionRegCenterGrid[iThread] < max_idx) {
+			long long idx = dev_receiversPositionRegCenterGrid[iThread]-shift;
+			dev_timeSlice_sigmaxx[idx] += dev_signalIn_sigmaxx[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmaxx[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+			dev_timeSlice_sigmayy[idx] += dev_signalIn_sigmayy[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmayy[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
+			dev_timeSlice_sigmazz[idx] += dev_signalIn_sigmazz[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn_sigmazz[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
 		}
 }
 //STAGGERED GRIDs
-__global__ void ker_inject_data_stagGriddomDec_3D(double *dev_signalIn, double *dev_timeSlice, int its, int it2, long long *dev_receiversPositionRegGrid, long long nReceiversRegGrid){
+__global__ void ker_inject_data_stagGriddomDec_3D(double *dev_signalIn, double *dev_timeSlice, int its, int it2, long long *dev_receiversPositionRegGrid, long long nReceiversRegGrid, long long shift, long long min_idx, long long max_idx){
 
     //thread per receiver device
     long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
-		if (iThread < nReceiversRegGrid) {
-			if (dev_receiversPositionRegGrid[iThread] >= 0) {
-				dev_timeSlice[dev_receiversPositionRegGrid[iThread]] += dev_signalIn[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
-			}
+		if (iThread < nReceiversRegGrid && min_idx <= dev_receiversPositionRegGrid[iThread] && dev_receiversPositionRegGrid[iThread] < max_idx) {
+			long long idx = dev_receiversPositionRegGrid[iThread]-shift;
+			dev_timeSlice[idx] += dev_signalIn[dev_nts*iThread+its] * dev_timeInterpFilter[it2+1] + dev_signalIn[dev_nts*iThread+its+1] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2+1];
 		}
 }
 
@@ -66,56 +63,52 @@ __global__ void ker_inject_data_stagGriddomDec_3D(double *dev_signalIn, double *
 /*															SOURCE EXTRACTION      												*/
 // NORMAL STRESSES
 /*extract and interpolate source thar are on center grid */
-__global__ void ker_record_source_centerGriddomDec_3D(double *dev_newTimeSlice_sigmaxx, double *dev_newTimeSlice_sigmayy, double *dev_newTimeSlice_sigmazz, double *dev_signalOut_sigmaxx, double *dev_signalOut_sigmayy, double *dev_signalOut_sigmazz, int its, int it2, long long *dev_sourcesPositionRegCenterGrid, long long nSourcesRegCenterGrid) {
+__global__ void ker_record_source_centerGriddomDec_3D(double *dev_newTimeSlice_sigmaxx, double *dev_newTimeSlice_sigmayy, double *dev_newTimeSlice_sigmazz, double *dev_signalOut_sigmaxx, double *dev_signalOut_sigmayy, double *dev_signalOut_sigmazz, int its, int it2, long long *dev_sourcesPositionRegCenterGrid, long long nSourcesRegCenterGrid, long long shift, long long min_idx, long long max_idx) {
     long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
-		if (iThread < nSourcesRegCenterGrid){
-			if (dev_sourcesPositionRegCenterGrid[iThread] >= 0) {
-				dev_signalOut_sigmaxx[dev_nts*iThread+its]   += dev_newTimeSlice_sigmaxx[dev_sourcesPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[it2];
-		    dev_signalOut_sigmaxx[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmaxx[dev_sourcesPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
-				dev_signalOut_sigmayy[dev_nts*iThread+its]   += dev_newTimeSlice_sigmayy[dev_sourcesPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[it2];
-		    dev_signalOut_sigmayy[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmayy[dev_sourcesPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
-		    dev_signalOut_sigmazz[dev_nts*iThread+its]   += dev_newTimeSlice_sigmazz[dev_sourcesPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[it2];
-		    dev_signalOut_sigmazz[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmazz[dev_sourcesPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
-			}
+		if (iThread < nSourcesRegCenterGrid && min_idx <= dev_sourcesPositionRegCenterGrid[iThread] && dev_sourcesPositionRegCenterGrid[iThread] < max_idx){
+			long long idx = dev_sourcesPositionRegCenterGrid[iThread] - shift;
+			dev_signalOut_sigmaxx[dev_nts*iThread+its]   += dev_newTimeSlice_sigmaxx[idx] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmaxx[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmaxx[idx] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+			dev_signalOut_sigmayy[dev_nts*iThread+its]   += dev_newTimeSlice_sigmayy[idx] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmayy[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmayy[idx] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+	    dev_signalOut_sigmazz[dev_nts*iThread+its]   += dev_newTimeSlice_sigmazz[idx] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmazz[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmazz[idx] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
 		}
 }
 //STAGGERED GRIDs
-__global__ void ker_record_source_stagGriddomDec_3D(double *dev_newTimeSlice, double *dev_signalOut, int its, int it2, long long *dev_sourcesPositionRegGrid, long long nSourcesRegGrid) {
+__global__ void ker_record_source_stagGriddomDec_3D(double *dev_newTimeSlice, double *dev_signalOut, int its, int it2, long long *dev_sourcesPositionRegGrid, long long nSourcesRegGrid, long long shift, long long min_idx, long long max_idx) {
     long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
-		if (iThread < nSourcesRegGrid){
-			if (dev_sourcesPositionRegGrid[iThread] >= 0) {
-				dev_signalOut[dev_nts*iThread+its]   += dev_newTimeSlice[dev_sourcesPositionRegGrid[iThread]] * dev_timeInterpFilter[it2];
-		    dev_signalOut[dev_nts*iThread+its+1] += dev_newTimeSlice[dev_sourcesPositionRegGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
-			}
+		if (iThread < nSourcesRegGrid && min_idx <= dev_sourcesPositionRegGrid[iThread] && dev_sourcesPositionRegGrid[iThread] < max_idx){
+			long long idx = dev_sourcesPositionRegGrid[iThread] - shift;
+			dev_signalOut[dev_nts*iThread+its]   += dev_newTimeSlice[idx] * dev_timeInterpFilter[it2];
+	    dev_signalOut[dev_nts*iThread+its+1] += dev_newTimeSlice[idx] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
 		}
 }
 
 /*															 DATA EXTRACTION      												*/
 // NORMAL STRESSES
 /* Extract and interpolate data on center grid */
-__global__ void ker_record_interp_data_centerGriddomDec_3D(double *dev_newTimeSlice_sigmaxx, double *dev_newTimeSlice_sigmayy, double *dev_newTimeSlice_sigmazz, double *dev_signalOut_sigmaxx, double *dev_signalOut_sigmayy, double *dev_signalOut_sigmazz, int its, int it2, long long *dev_receiversPositionRegCenterGrid, long long nReceiversRegCenterGrid) {
+__global__ void ker_record_interp_data_centerGriddomDec_3D(double *dev_newTimeSlice_sigmaxx, double *dev_newTimeSlice_sigmayy, double *dev_newTimeSlice_sigmazz, double *dev_signalOut_sigmaxx, double *dev_signalOut_sigmayy, double *dev_signalOut_sigmazz, int its, int it2, long long *dev_receiversPositionRegCenterGrid, long long nReceiversRegCenterGrid, long long shift, long long min_idx, long long max_idx) {
 
     long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
-    if (iThread < nReceiversRegCenterGrid) {
-			if (dev_receiversPositionRegCenterGrid[iThread] >= 0) {
-		    dev_signalOut_sigmaxx[dev_nts*iThread+its]   += dev_newTimeSlice_sigmaxx[dev_receiversPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[it2];
-		    dev_signalOut_sigmaxx[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmaxx[dev_receiversPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
-				dev_signalOut_sigmayy[dev_nts*iThread+its]   += dev_newTimeSlice_sigmayy[dev_receiversPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[it2];
-		    dev_signalOut_sigmayy[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmayy[dev_receiversPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
-		    dev_signalOut_sigmazz[dev_nts*iThread+its]   += dev_newTimeSlice_sigmazz[dev_receiversPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[it2];
-		    dev_signalOut_sigmazz[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmazz[dev_receiversPositionRegCenterGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
-			}
+    if (iThread < nReceiversRegCenterGrid && min_idx <= dev_receiversPositionRegCenterGrid[iThread] && dev_receiversPositionRegCenterGrid[iThread] < max_idx) {
+			long long idx = dev_receiversPositionRegCenterGrid[iThread] - shift;
+	    dev_signalOut_sigmaxx[dev_nts*iThread+its]   += dev_newTimeSlice_sigmaxx[idx] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmaxx[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmaxx[idx] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+			dev_signalOut_sigmayy[dev_nts*iThread+its]   += dev_newTimeSlice_sigmayy[idx] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmayy[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmayy[idx] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
+	    dev_signalOut_sigmazz[dev_nts*iThread+its]   += dev_newTimeSlice_sigmazz[idx] * dev_timeInterpFilter[it2];
+	    dev_signalOut_sigmazz[dev_nts*iThread+its+1] += dev_newTimeSlice_sigmazz[idx] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
     }
 }
 //STAGGERED GRIDs
-__global__ void ker_record_interp_data_stagGriddomDec_3D(double *dev_newTimeSlice, double *dev_signalOut, int its, int it2, long long *dev_receiversPositionRegGrid, long long nReceiversRegGrid) {
+__global__ void ker_record_interp_data_stagGriddomDec_3D(double *dev_newTimeSlice, double *dev_signalOut, int its, int it2, long long *dev_receiversPositionRegGrid, long long nReceiversRegGrid, long long shift, long long min_idx, long long max_idx) {
 
     long long iThread = blockIdx.x * blockDim.x + threadIdx.x;
-    if (iThread < nReceiversRegGrid) {
-			if (dev_receiversPositionRegGrid[iThread] >= 0) {
-		    dev_signalOut[dev_nts*iThread+its]   += dev_newTimeSlice[dev_receiversPositionRegGrid[iThread]] * dev_timeInterpFilter[it2];
-		    dev_signalOut[dev_nts*iThread+its+1] += dev_newTimeSlice[dev_receiversPositionRegGrid[iThread]] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
-			}
+    if (iThread < nReceiversRegGrid && min_idx <= dev_receiversPositionRegGrid[iThread] && dev_receiversPositionRegGrid[iThread] < max_idx) {
+			long long idx = dev_receiversPositionRegGrid[iThread] - shift;
+	    dev_signalOut[dev_nts*iThread+its]   += dev_newTimeSlice[idx] * dev_timeInterpFilter[it2];
+	    dev_signalOut[dev_nts*iThread+its+1] += dev_newTimeSlice[idx] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2];
     }
 }
 

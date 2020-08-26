@@ -156,13 +156,13 @@ __global__ void stepFwdGpu_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_
 
 	// Loading for Vy along the y-direction (forward derivative)
 	long long iGlobalVy = iGlobal - (FAT-1) * yStride;
-	dev_c_vy_y[1] = dev_c_vy[iGlobalVy]; // iy = 0
-	dev_c_vy_y[2] = dev_c_vy[iGlobalVy+=yStride]; // iy = 1
-	shared_c_vy[ixLocal][izLocal] = dev_c_vy[iGlobalVy+=yStride]; // Only the central point on the y-axis is stored in the shared memory // iy = 2
-	dev_c_vy_y[3] = dev_c_vy[iGlobalVy+=yStride]; // iy = 3
-	dev_c_vy_y[4] = dev_c_vy[iGlobalVy+=yStride]; // iy = 4
-	dev_c_vy_y[5] = dev_c_vy[iGlobalVy+=yStride];// iy = 5
-	dev_c_vy_y[6] = dev_c_vy[iGlobalVy+=yStride]; // At that point, iyTemp = 2*FAT-1 // iy = 6
+	dev_c_vy_y[1] = dev_c_vy[iGlobalVy]; // iy = 1
+	dev_c_vy_y[2] = dev_c_vy[iGlobalVy+=yStride]; // iy = 2
+	shared_c_vy[ixLocal][izLocal] = dev_c_vy[iGlobalVy+=yStride]; // Only the central point on the y-axis is stored in the shared memory // iy = 3
+	dev_c_vy_y[3] = dev_c_vy[iGlobalVy+=yStride]; // iy = 4
+	dev_c_vy_y[4] = dev_c_vy[iGlobalVy+=yStride]; // iy = 5
+	dev_c_vy_y[5] = dev_c_vy[iGlobalVy+=yStride];// iy = 6
+	dev_c_vy_y[6] = dev_c_vy[iGlobalVy+=yStride]; // At that point, iyTemp = 2*FAT-1 // iy = 7
 
 	// Loading for Vz along the y-direction (backward derivative)
 	long long iGlobalVz = iGlobal - FAT * yStride;
@@ -176,13 +176,13 @@ __global__ void stepFwdGpu_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_
 
 	// Loading for Sigmaxy along the y-direction (forward derivative)
 	long long iGlobalSxy = iGlobal - (FAT-1) * yStride;
-	dev_c_sigmaxy_y[1] = dev_c_sigmaxy[iGlobalSxy]; // iy = 0
-	dev_c_sigmaxy_y[2] = dev_c_sigmaxy[iGlobalSxy+=yStride]; // iy = 1
-	shared_c_sigmaxy[ixLocal][izLocal] = dev_c_sigmaxy[iGlobalSxy+=yStride]; // Only the central point on the y-axis is stored in the shared memory // iy = 2
-	dev_c_sigmaxy_y[3] = dev_c_sigmaxy[iGlobalSxy+=yStride]; // iy = 3
-	dev_c_sigmaxy_y[4] = dev_c_sigmaxy[iGlobalSxy+=yStride]; // iy = 4
-	dev_c_sigmaxy_y[5] = dev_c_sigmaxy[iGlobalSxy+=yStride];// iy = 5
-	dev_c_sigmaxy_y[6] = dev_c_sigmaxy[iGlobalSxy+=yStride]; // At that point, iyTemp = 2*FAT-1 // iy = 6
+	dev_c_sigmaxy_y[1] = dev_c_sigmaxy[iGlobalSxy]; // iy = 1
+	dev_c_sigmaxy_y[2] = dev_c_sigmaxy[iGlobalSxy+=yStride]; // iy = 2
+	shared_c_sigmaxy[ixLocal][izLocal] = dev_c_sigmaxy[iGlobalSxy+=yStride]; // Only the central point on the y-axis is stored in the shared memory // iy = 3
+	dev_c_sigmaxy_y[3] = dev_c_sigmaxy[iGlobalSxy+=yStride]; // iy = 4
+	dev_c_sigmaxy_y[4] = dev_c_sigmaxy[iGlobalSxy+=yStride]; // iy = 5
+	dev_c_sigmaxy_y[5] = dev_c_sigmaxy[iGlobalSxy+=yStride];// iy = 6
+	dev_c_sigmaxy_y[6] = dev_c_sigmaxy[iGlobalSxy+=yStride]; // At that point, iyTemp = 2*FAT-1 // iy = 7
 
 	// Loading for Sigmayy along the y-direction (backward derivative)
 	long long iGlobalSyy = iGlobal - FAT * yStride;
@@ -196,13 +196,13 @@ __global__ void stepFwdGpu_3D(double *dev_o_vx, double *dev_o_vy, double *dev_o_
 
 	// Loading for Sigmayz along the y-direction (forward derivative)
 	long long iGlobalSyz = iGlobal - (FAT-1) * yStride;
-	dev_c_sigmayz_y[1] = dev_c_sigmayz[iGlobalSyz]; // iy = 0
-	dev_c_sigmayz_y[2] = dev_c_sigmayz[iGlobalSyz+=yStride]; // iy = 1
-	shared_c_sigmayz[ixLocal][izLocal] = dev_c_sigmayz[iGlobalSyz+=yStride]; // Only the central point on the y-axis is stored in the shared memory // iy = 2
-	dev_c_sigmayz_y[3] = dev_c_sigmayz[iGlobalSyz+=yStride]; // iy = 3
-	dev_c_sigmayz_y[4] = dev_c_sigmayz[iGlobalSyz+=yStride]; // iy = 4
-	dev_c_sigmayz_y[5] = dev_c_sigmayz[iGlobalSyz+=yStride];// iy = 5
-	dev_c_sigmayz_y[6] = dev_c_sigmayz[iGlobalSyz+=yStride]; // At that point, iyTemp = 2*FAT-1 // iy = 6
+	dev_c_sigmayz_y[1] = dev_c_sigmayz[iGlobalSyz]; // iy = 1
+	dev_c_sigmayz_y[2] = dev_c_sigmayz[iGlobalSyz+=yStride]; // iy = 2
+	shared_c_sigmayz[ixLocal][izLocal] = dev_c_sigmayz[iGlobalSyz+=yStride]; // Only the central point on the y-axis is stored in the shared memory // iy = 3
+	dev_c_sigmayz_y[3] = dev_c_sigmayz[iGlobalSyz+=yStride]; // iy = 4
+	dev_c_sigmayz_y[4] = dev_c_sigmayz[iGlobalSyz+=yStride]; // iy = 5
+	dev_c_sigmayz_y[5] = dev_c_sigmayz[iGlobalSyz+=yStride];// iy = 6
+	dev_c_sigmayz_y[6] = dev_c_sigmayz[iGlobalSyz+=yStride]; // At that point, iyTemp = 2*FAT-1 // iy = 7
 
 	// Loop over y
 	for (long long iy=FAT; iy<ny-FAT; iy++){

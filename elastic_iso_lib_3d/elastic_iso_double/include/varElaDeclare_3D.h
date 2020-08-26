@@ -57,7 +57,8 @@
 	double **dev_modelRegDts_vx, **dev_modelRegDts_vy, **dev_modelRegDts_vz, **dev_modelRegDts_sigmaxx, **dev_modelRegDts_sigmayy, **dev_modelRegDts_sigmazz, **dev_modelRegDts_sigmaxz, **dev_modelRegDts_sigmaxy, **dev_modelRegDts_sigmayz; // Model for nonlinear propagation (wavelet)
 	double **dev_dataRegDts_vx, **dev_dataRegDts_vy, **dev_dataRegDts_vz, **dev_dataRegDts_sigmaxx, **dev_dataRegDts_sigmayy, **dev_dataRegDts_sigmazz, **dev_dataRegDts_sigmaxz, **dev_dataRegDts_sigmaxy, **dev_dataRegDts_sigmayz; // Data on device at coarse time-sampling (converted to regular grid)
 
-	double **dev_rhoxDtw, **dev_rhoyDtw, **dev_rhozDtw, **dev_lamb2MuDtw, **dev_lambDtw, **dev_muxzDtw, **dev_muxyDtw, **dev_muyzDtw; // Precomputed scaled properties
+	// Precomputed scaled properties
+	double **dev_rhoxDtw, **dev_rhoyDtw, **dev_rhozDtw, **dev_lamb2MuDtw, **dev_lambDtw, **dev_muxzDtw, **dev_muxyDtw, **dev_muyzDtw;
 
 	/************************************* HOST DECLARATION *********************************/
 	double host_dx;
