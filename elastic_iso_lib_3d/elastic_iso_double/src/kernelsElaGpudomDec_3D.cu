@@ -136,7 +136,19 @@ __global__ void dampCosineEdgedomDec_3D(double *dev_p1_vx, double *dev_p2_vx, do
 	long long ixGlobal = FAT + blockIdx.y * BLOCK_SIZE_X + threadIdx.y; // Global x-coordinate on the x-axis
   long long yStride = nz * nx;
 
-	for (long long iyGlobal=FAT; iyGlobal<ny-FAT; iyGlobal++){
+	long long iyStart, iyEnd;
+	if (dampCond == 0) {
+		iyStart=FAT;
+		iyEnd=ny; //Dampening in the FAT layer
+	} else if (dampCond == 2) {
+		iyStart=0;//Dampening in the FAT layer
+		iyEnd=ny-FAT;
+	} else {
+		iyStart=0;//Dampening in the FAT layer
+		iyEnd=ny; //Dampening in the FAT layer
+	}
+
+	for (long long iyGlobal=iyStart; iyGlobal<iyEnd; iyGlobal++){
 
 		// Compute distance to the closest edge of model (not including the fat)
 		// For example, the first non fat element will have a distance of 0

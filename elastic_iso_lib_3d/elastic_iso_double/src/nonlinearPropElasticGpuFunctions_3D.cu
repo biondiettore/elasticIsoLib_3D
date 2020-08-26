@@ -946,10 +946,6 @@ void propElasticFwdGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double
 }
 void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, double *modelRegDts_vz, double *modelRegDts_sigmaxx, double *modelRegDts_sigmayy, double *modelRegDts_sigmazz, double *modelRegDts_sigmaxz, double *modelRegDts_sigmaxy, double *modelRegDts_sigmayz, double *dataRegDts_vx, double *dataRegDts_vy, double *dataRegDts_vz, double *dataRegDts_sigmaxx, double *dataRegDts_sigmayy, double *dataRegDts_sigmazz, double *dataRegDts_sigmaxz, double *dataRegDts_sigmaxy, double *dataRegDts_sigmayz, long long *sourcesPositionRegCenterGrid, long long nSourcesRegCenterGrid, long long *sourcesPositionRegXGrid, long long nSourcesRegXGrid, long long *sourcesPositionRegYGrid, long long nSourcesRegYGrid, long long *sourcesPositionRegZGrid, long long nSourcesRegZGrid, long long *sourcesPositionRegXZGrid, long long nSourcesRegXZGrid, long long *sourcesPositionRegXYGrid, long long nSourcesRegXYGrid, long long *sourcesPositionRegYZGrid, long long nSourcesRegYZGrid, long long *receiversPositionRegCenterGrid, long long nReceiversRegCenterGrid, long long *receiversPositionRegXGrid, long long nReceiversRegXGrid, long long *receiversPositionRegYGrid, long long nReceiversRegYGrid, long long *receiversPositionRegZGrid, long long nReceiversRegZGrid, long long *receiversPositionRegXZGrid, long long nReceiversRegXZGrid, long long *receiversPositionRegXYGrid, long long nReceiversRegXYGrid, long long *receiversPositionRegYZGrid, long long nReceiversRegYZGrid, int nx, int ny, int nz, std::vector<int> ny_domDec, std::vector<int> gpuList){
 
-	std::cout << "max modelRegDts_vx = " << *std::max_element(modelRegDts_vx,modelRegDts_vx+nSourcesRegXGrid*host_nts) << std::endl;
-	std::cout << "max modelRegDts_vy = " << *std::max_element(modelRegDts_vy,modelRegDts_vy+nSourcesRegYGrid*host_nts) << std::endl;
-	std::cout << "max modelRegDts_vz = " << *std::max_element(modelRegDts_vz,modelRegDts_vz+nSourcesRegZGrid*host_nts) << std::endl;
-
 	// Number of GPUs employed
 	int nGpu = gpuList.size();
 	// Other parameters
@@ -983,22 +979,6 @@ void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 			nyBody[iGpu] = ny_domDec[iGpu]-2*FAT;
 		}
 	}
-
-
-	for (long long idx = 0; idx <nSourcesRegXGrid; idx++){
-		std::cout << "idx = " << idx << std::endl;
-		std::cout << "sourcesPositionRegXGrid[idx] = " << sourcesPositionRegXGrid[idx] << std::endl;
-	}
-
-	for(int iGpu=0; iGpu<nGpu; iGpu++){
-		std::cout << "iGpu = " << iGpu << std::endl;
-		std::cout << "minIdxInj[iGpu] = " << minIdxInj[iGpu] << std::endl;
-		std::cout << "maxIdxInj[iGpu] = " << maxIdxInj[iGpu] << std::endl;
-		std::cout << "minIdxExt[iGpu] = " << minIdxExt[iGpu] << std::endl;
-		std::cout << "maxIdxExt[iGpu] = " << maxIdxExt[iGpu] << std::endl;
-	}
-
-
 
 	//Define separate streams for overlapping communication
   cudaStream_t haloStream[nGpu], bodyStream[nGpu];
@@ -1059,18 +1039,9 @@ void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 	int nblockSouXYGrid = (nSourcesRegXYGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
 	int nblockSouYZGrid = (nSourcesRegYZGrid+BLOCK_SIZE_DATA-1) / BLOCK_SIZE_DATA;
 
-	double **tmp_slice;
-	tmp_slice = new double*[nGpu];
-	for (int iGpu=0; iGpu<nGpu; iGpu++){
-		tmp_slice[iGpu] = new double[nx*nz*ny_domDec[iGpu]];
-	}
-
 	// Start propagation
 	for (int its = 0; its < host_nts-1; its++){
-			std::cout << "its = " << its << std::endl;
 			for (int it2 = 1; it2 < host_sub+1; it2++){
-					// Compute fine time-step index
-					std::cout << "	it2 = " << it2 << std::endl;
 
 						/*************************************/
 						// Step forward
@@ -1090,7 +1061,7 @@ void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 								launchFwdStepKernelsdomDec_3D(dimGrid, dimBlock, nx, 3*FAT, nz, yStride*(ny_domDec[iGpu]-3*FAT), iGpu, haloStream[iGpu]);
 							}
 
-							cudaStreamQuery(haloStream[iGpu]);
+							// cudaStreamQuery(haloStream[iGpu]);
 
 							//Computing Internal parts
 							if (iGpu == 0) {
@@ -1141,15 +1112,6 @@ void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 						}
 						/*************************************/
 
-						//DEBUG
-						for(int iGpu=0; iGpu<nGpu; iGpu++){
-					    cudaSetDevice(gpuList[iGpu]);
-							cuda_call(cudaMemcpy(tmp_slice[iGpu], dev_p0_vx[iGpu], nx*nz*ny_domDec[iGpu]*sizeof(double), cudaMemcpyDeviceToHost));
-							std::cout << "iGpu = " << iGpu << std::endl;
-							std::cout << "max vx_p0 = " << *std::max_element(tmp_slice[iGpu],tmp_slice[iGpu]+nx*nz*ny_domDec[iGpu]) << std::endl;
-							std::cout << "min vx_p0 = " << *std::min_element(tmp_slice[iGpu],tmp_slice[iGpu]+nx*nz*ny_domDec[iGpu]) << std::endl;
-						}
-
 						/*************************************/
 						// Extract and interpolate data (excluding the halos in this case)
 						for(int iGpu=0; iGpu<nGpu; iGpu++){
@@ -1185,6 +1147,7 @@ void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 		cuda_call(cudaMemcpy(dataRegDts_sigmayzTmp, dev_dataRegDts_sigmayz[iGpu], nReceiversRegYZGrid*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
 
 		//Adding Vx to output data
+		#pragma omp parallel for collapse(2)
 		for (long long idev = 0; idev < nReceiversRegXGrid; idev++){
 			for (int its = 0; its < host_nts; its++){
 				long long idx = idev*host_nts + its;
@@ -1192,6 +1155,7 @@ void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 			}
 		}
 		//Adding Vy to output data
+		#pragma omp parallel for collapse(2)
 		for (long long idev = 0; idev < nReceiversRegYGrid; idev++){
 			for (int its = 0; its < host_nts; its++){
 				long long idx = idev*host_nts + its;
@@ -1199,6 +1163,7 @@ void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 			}
 		}
 		//Adding Vz to output data
+		#pragma omp parallel for collapse(2)
 		for (long long idev = 0; idev < nReceiversRegZGrid; idev++){
 			for (int its = 0; its < host_nts; its++){
 				long long idx = idev*host_nts + its;
@@ -1206,6 +1171,7 @@ void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 			}
 		}
 		//Adding Sigmaxx, Sigmayy, Sigmazz to output data
+		#pragma omp parallel for collapse(2)
 		for (long long idev = 0; idev < nReceiversRegCenterGrid; idev++){
 			for (int its = 0; its < host_nts; its++){
 				long long idx = idev*host_nts + its;
@@ -1215,6 +1181,7 @@ void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 			}
 		}
 		//Adding Sigmaxz to output data
+		#pragma omp parallel for collapse(2)
 		for (long long idev = 0; idev < nReceiversRegXZGrid; idev++){
 			for (int its = 0; its < host_nts; its++){
 				long long idx = idev*host_nts + its;
@@ -1222,6 +1189,7 @@ void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 			}
 		}
 		//Adding Sigmaxy to output data
+		#pragma omp parallel for collapse(2)
 		for (long long idev = 0; idev < nReceiversRegXYGrid; idev++){
 			for (int its = 0; its < host_nts; its++){
 				long long idx = idev*host_nts + its;
@@ -1229,6 +1197,7 @@ void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 			}
 		}
 		//Adding Sigmayz to output data
+		#pragma omp parallel for collapse(2)
 		for (long long idev = 0; idev < nReceiversRegYZGrid; idev++){
 			for (int its = 0; its < host_nts; its++){
 				long long idx = idev*host_nts + its;
@@ -1237,13 +1206,6 @@ void propElasticFwdGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 		}
 
 	}
-
-	std::cout << "max vx = " << *std::max_element(dataRegDts_vx,dataRegDts_vx+nReceiversRegXGrid*host_nts) << std::endl;
-	std::cout << "max vy = " << *std::max_element(dataRegDts_vy,dataRegDts_vy+nReceiversRegYGrid*host_nts) << std::endl;
-	std::cout << "max vz = " << *std::max_element(dataRegDts_vz,dataRegDts_vz+nReceiversRegZGrid*host_nts) << std::endl;
-	std::cout << "min vx = " << *std::min_element(dataRegDts_vx,dataRegDts_vx+nReceiversRegXGrid*host_nts) << std::endl;
-	std::cout << "min vy = " << *std::min_element(dataRegDts_vy,dataRegDts_vy+nReceiversRegYGrid*host_nts) << std::endl;
-	std::cout << "min vz = " << *std::min_element(dataRegDts_vz,dataRegDts_vz+nReceiversRegZGrid*host_nts) << std::endl;
 
 	//Deleting temporary data arrays
 	delete[] dataRegDts_vxTmp;
