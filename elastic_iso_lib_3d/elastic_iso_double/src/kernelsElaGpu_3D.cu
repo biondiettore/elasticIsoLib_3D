@@ -867,3 +867,422 @@ __global__ void dampCosineEdge_3D(double *dev_p1_vx, double *dev_p2_vx, double *
 		}
 	}
 }
+
+
+/******************************************************************************/
+/**************************** Scattering/Imaging ******************************/
+/******************************************************************************/
+__global__ void imagingElaFwdGpu_3D(double* dev_o_vx, double* dev_c_vx, double* dev_n_vx, double* dev_o_vy, double* dev_c_vy, double* dev_n_vy, double* dev_o_vz, double* dev_c_vz, double* dev_n_vz, double* dev_vx, double* dev_vy, double* dev_vz, double* dev_sigmaxx, double* dev_sigmayy, double* dev_sigmazz, double* dev_sigmaxz, double* dev_sigmaxy, double* dev_sigmayz, double* dev_drhox, double* dev_drhoy, double* dev_drhoz, double* dev_dlame, double* dev_dmu, double* dev_dmuxz, double* dev_dmuxy, double* dev_dmuyz, int nx, int ny, int nz, int its){
+
+	// Allocate shared memory for a specific block
+	__shared__ double shared_c_vx[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vx wavefield y-slice block
+	__shared__ double shared_c_vy[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vy wavefield y-slice block
+	__shared__ double shared_c_vz[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vz wavefield y-slice block
+
+	// Global coordinates for the faster two axes (z and x)
+	long long izGlobal = FAT + blockIdx.x * BLOCK_SIZE_Z + threadIdx.x; // Coordinate of current thread on the z-axis
+	long long ixGlobal = FAT + blockIdx.y * BLOCK_SIZE_X + threadIdx.y; // Coordinate of current thread on the x-axis
+	// Local coordinates for the fastest two axes
+	long long izLocal = FAT + threadIdx.x; // z-coordinate on the local grid stored in shared memory
+	long long ixLocal = FAT + threadIdx.y; // x-coordinate on the local grid stored in shared memory
+
+	// Allocate the arrays that will store the wavefield values in the y-direction
+	// Only some components need the be used for derivative computation along the y axis
+	double dev_c_vx_y[2*FAT-1];
+	double dev_c_vy_y[2*FAT-1];
+	double dev_c_vz_y[2*FAT-1];
+
+	// Number of elements in one y-slice
+	long long yStride = nz * nx;
+
+	// Global index of the first element at which we are going to compute the Laplacian
+	// Skip the first FAT elements on the y-axis
+	long long iGlobal = FAT * yStride + nz * ixGlobal + izGlobal;
+
+	// Global index of the element with the smallest y-position needed to compute derivatives at iGlobal
+	long long iGlobalVx = iGlobal - FAT * yStride;
+	// Loading stride for Vx along the y-direction (backward derivative)
+	dev_c_vx_y[1] = dev_c_vx[iGlobalVx]; // iy = 0
+	dev_c_vx_y[2] = dev_c_vx[iGlobalVx+=yStride]; // iy = 1
+	dev_c_vx_y[3] = dev_c_vx[iGlobalVx+=yStride]; // iy = 2
+	shared_c_vx[ixLocal][izLocal] = dev_c_vx[iGlobalVx+=yStride]; // Only the central point on the y-axis is stored in the shared memory // iy = 3
+	dev_c_vx_y[4] = dev_c_vx[iGlobalVx+=yStride]; // iy = 4
+	dev_c_vx_y[5] = dev_c_vx[iGlobalVx+=yStride]; // iy = 5
+	dev_c_vx_y[6] = dev_c_vx[iGlobalVx+=yStride]; // iy = 6
+
+	// Loading for Vy along the y-direction (forward derivative)
+	long long iGlobalVy = iGlobal - (FAT-1) * yStride;
+	dev_c_vy_y[1] = dev_c_vy[iGlobalVy]; // iy = 1
+	dev_c_vy_y[2] = dev_c_vy[iGlobalVy+=yStride]; // iy = 2
+	shared_c_vy[ixLocal][izLocal] = dev_c_vy[iGlobalVy+=yStride]; // Only the central point on the y-axis is stored in the shared memory // iy = 3
+	dev_c_vy_y[3] = dev_c_vy[iGlobalVy+=yStride]; // iy = 4
+	dev_c_vy_y[4] = dev_c_vy[iGlobalVy+=yStride]; // iy = 5
+	dev_c_vy_y[5] = dev_c_vy[iGlobalVy+=yStride];// iy = 6
+	dev_c_vy_y[6] = dev_c_vy[iGlobalVy+=yStride]; // At that point, iyTemp = 2*FAT-1 // iy = 7
+
+	// Loading for Vz along the y-direction (backward derivative)
+	long long iGlobalVz = iGlobal - FAT * yStride;
+	dev_c_vz_y[1] = dev_c_vz[iGlobalVz]; // iy = 0
+	dev_c_vz_y[2] = dev_c_vz[iGlobalVz+=yStride]; // iy = 1
+	dev_c_vz_y[3] = dev_c_vz[iGlobalVz+=yStride]; // iy = 2
+	shared_c_vz[ixLocal][izLocal] = dev_c_vz[iGlobalVz+=yStride]; // Only the central point on the y-axis is stored in the shared memory // iy = 3
+	dev_c_vz_y[4] = dev_c_vz[iGlobalVz+=yStride]; // iy = 4
+	dev_c_vz_y[5] = dev_c_vz[iGlobalVz+=yStride]; // iy = 5
+	dev_c_vz_y[6] = dev_c_vz[iGlobalVz+=yStride]; // iy = 6
+
+	// Loop over y
+	for (long long iy=FAT; iy<ny-FAT; iy++){
+		// Update Vx values along the y-axis
+		dev_c_vx_y[0] = dev_c_vx_y[1];
+		dev_c_vx_y[1] = dev_c_vx_y[2];
+		dev_c_vx_y[2] = dev_c_vx_y[3];
+		dev_c_vx_y[3] = shared_c_vx[ixLocal][izLocal];
+		__syncthreads(); // Synchronize all threads within each block before updating the value of the shared memory at ixLocal, izLocal
+		shared_c_vx[ixLocal][izLocal] = dev_c_vx_y[4]; // Store the middle one in the shared memory (it will be re-used to compute the derivatives in the z- and x-directions)
+		dev_c_vx_y[4] = dev_c_vx_y[5];
+		dev_c_vx_y[5] = dev_c_vx_y[6];
+		dev_c_vx_y[6] = dev_c_vx[iGlobalVx+=yStride];
+
+		// Update Vy values along the y-axis
+		dev_c_vy_y[0] = dev_c_vy_y[1];
+		dev_c_vy_y[1] = dev_c_vy_y[2];
+		dev_c_vy_y[2] = shared_c_vy[ixLocal][izLocal];
+		shared_c_vy[ixLocal][izLocal] = dev_c_vy_y[3]; // Store the middle one in the shared memory (it will be re-used to compute the derivatives in the z- and x-directions)
+		dev_c_vy_y[3] = dev_c_vy_y[4];
+		dev_c_vy_y[4] = dev_c_vy_y[5];
+		dev_c_vy_y[5] = dev_c_vy_y[6];
+		dev_c_vy_y[6] = dev_c_vy[iGlobalVy+=yStride];
+
+		// Update Vz values along the y-axis
+		dev_c_vz_y[0] = dev_c_vz_y[1];
+		dev_c_vz_y[1] = dev_c_vz_y[2];
+		dev_c_vz_y[2] = dev_c_vz_y[3];
+		dev_c_vz_y[3] = shared_c_vz[ixLocal][izLocal];
+		shared_c_vz[ixLocal][izLocal] = dev_c_vz_y[4]; // Store the middle one in the shared memory (it will be re-used to compute the derivatives in the z- and x-directions)
+		dev_c_vz_y[4] = dev_c_vz_y[5];
+		dev_c_vz_y[5] = dev_c_vz_y[6];
+		dev_c_vz_y[6] = dev_c_vz[iGlobalVz+=yStride];
+
+		// Load the halos in the x-direction
+		// Threads with x-index ranging from 0,...,FAT will load the first and last FAT elements of the block on the x-axis to shared memory
+		if (threadIdx.y < FAT) {
+			shared_c_vx[threadIdx.y][izLocal] = dev_c_vx[iGlobal-nz*FAT]; // Left side
+			shared_c_vy[threadIdx.y][izLocal] = dev_c_vy[iGlobal-nz*FAT]; // Left side
+			shared_c_vz[threadIdx.y][izLocal] = dev_c_vz[iGlobal-nz*FAT]; // Left side
+
+			shared_c_vx[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vx[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_vy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vy[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_vz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vz[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+		}
+
+		// Load the halos in the z-direction
+		if (threadIdx.x < FAT) {
+			shared_c_vx[ixLocal][threadIdx.x] = dev_c_vx[iGlobal-FAT]; // Up
+			shared_c_vy[ixLocal][threadIdx.x] = dev_c_vy[iGlobal-FAT]; // Up
+			shared_c_vz[ixLocal][threadIdx.x] = dev_c_vz[iGlobal-FAT]; // Up
+
+			shared_c_vx[ixLocal][izLocal+BLOCK_SIZE_Z] = dev_c_vx[iGlobal+BLOCK_SIZE_Z]; // Down
+			shared_c_vy[ixLocal][izLocal+BLOCK_SIZE_Z] = dev_c_vy[iGlobal+BLOCK_SIZE_Z]; // Down
+			shared_c_vz[ixLocal][izLocal+BLOCK_SIZE_Z] = dev_c_vz[iGlobal+BLOCK_SIZE_Z]; // Down
+		}
+
+		// Wait until all threads of this block have loaded the slice y-slice into shared memory
+		__syncthreads(); // Synchronise all threads within each block
+
+		// Computing common derivative terms
+		// dvx/dx (+)
+		double dvx_dx = dev_xCoeff[0]*(shared_c_vx[ixLocal+1][izLocal]-shared_c_vx[ixLocal][izLocal])  +
+    								dev_xCoeff[1]*(shared_c_vx[ixLocal+2][izLocal]-shared_c_vx[ixLocal-1][izLocal])+
+    								dev_xCoeff[2]*(shared_c_vx[ixLocal+3][izLocal]-shared_c_vx[ixLocal-2][izLocal])+
+    								dev_xCoeff[3]*(shared_c_vx[ixLocal+4][izLocal]-shared_c_vx[ixLocal-3][izLocal]);
+		// dvy/dx (+)
+		double dvy_dy = dev_yCoeff[0]*(dev_c_vy_y[3]-shared_c_vy[ixLocal][izLocal]) +
+    								dev_yCoeff[1]*(dev_c_vy_y[4]-dev_c_vy_y[2])+
+    								dev_yCoeff[2]*(dev_c_vy_y[5]-dev_c_vy_y[1])+
+    								dev_yCoeff[3]*(dev_c_vy_y[6]-dev_c_vy_y[0]);
+		// dvz/dx (+)
+		double dvz_dz = dev_zCoeff[0]*(shared_c_vz[ixLocal][izLocal+1]-shared_c_vz[ixLocal][izLocal])  +
+    								dev_zCoeff[1]*(shared_c_vz[ixLocal][izLocal+2]-shared_c_vz[ixLocal][izLocal-1])+
+    								dev_zCoeff[2]*(shared_c_vz[ixLocal][izLocal+3]-shared_c_vz[ixLocal][izLocal-2])+
+    								dev_zCoeff[3]*(shared_c_vz[ixLocal][izLocal+4]-shared_c_vz[ixLocal][izLocal-3]);
+
+		//Note we assume zero wavefield for its < 0 and its > ntw
+    //Scattering Vx and Vz components (- drho * dvx/dt, - drho * dvy/dt , and - drho * dvz/dt)
+    if(its == 0){
+        dev_vx[iGlobal] = dev_drhox[iGlobal] * (- dev_n_vx[iGlobal])*dev_dts_inv;
+				dev_vy[iGlobal] = dev_drhoy[iGlobal] * (- dev_n_vy[iGlobal])*dev_dts_inv;
+        dev_vz[iGlobal] = dev_drhoz[iGlobal] * (- dev_n_vz[iGlobal])*dev_dts_inv;
+    } else if(its == dev_nts-1){
+        dev_vx[iGlobal] = dev_drhox[iGlobal] * (dev_o_vx[iGlobal])*dev_dts_inv;
+				dev_vy[iGlobal] = dev_drhoy[iGlobal] * (dev_o_vy[iGlobal])*dev_dts_inv;
+        dev_vz[iGlobal] = dev_drhoz[iGlobal] * (dev_o_vz[iGlobal])*dev_dts_inv;
+    } else {
+				dev_vx[iGlobal] = dev_drhox[iGlobal] * (dev_o_vx[iGlobal] - dev_n_vx[iGlobal])*dev_dts_inv;
+				dev_vy[iGlobal] = dev_drhoy[iGlobal] * (dev_o_vy[iGlobal] - dev_n_vy[iGlobal])*dev_dts_inv;
+        dev_vz[iGlobal] = dev_drhoz[iGlobal] * (dev_o_vz[iGlobal] - dev_n_vz[iGlobal])*dev_dts_inv;
+    }
+
+		double dvxyz_dxyz = dvx_dx + dvy_dy + dvz_dz;
+
+		//Scattering Sigmaxx component
+    dev_sigmaxx[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvx_dx;
+		//Scattering Sigmayy component
+    dev_sigmayy[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvy_dy;
+		//Scattering Sigmaxx component
+    dev_sigmazz[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvz_dz;
+		//Scattering Sigmaxz component
+		dev_sigmaxz[iGlobal] = dev_dmuxz[iGlobal]*(
+														 // dvx_dz (-)
+														 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
+														 dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
+														 dev_zCoeff[2]*(shared_c_vx[ixLocal][izLocal+2]-shared_c_vx[ixLocal][izLocal-3])+
+														 dev_zCoeff[3]*(shared_c_vx[ixLocal][izLocal+3]-shared_c_vx[ixLocal][izLocal-4])+
+														 // dvz_dx (-)
+														 dev_xCoeff[0]*(shared_c_vz[ixLocal][izLocal]-shared_c_vz[ixLocal-1][izLocal])  +
+														 dev_xCoeff[1]*(shared_c_vz[ixLocal+1][izLocal]-shared_c_vz[ixLocal-2][izLocal])+
+														 dev_xCoeff[2]*(shared_c_vz[ixLocal+2][izLocal]-shared_c_vz[ixLocal-3][izLocal])+
+														 dev_xCoeff[3]*(shared_c_vz[ixLocal+3][izLocal]-shared_c_vz[ixLocal-4][izLocal])
+													);
+
+		//Scattering Sigmaxy component
+		dev_sigmaxy[iGlobal] = dev_dmuxy[iGlobal]*(
+														 // dvx_dy (-)
+														 dev_yCoeff[0]*(shared_c_vx[ixLocal][izLocal]-dev_c_vx_y[3])  +
+													   dev_yCoeff[1]*(dev_c_vx_y[4]-dev_c_vx_y[2])+
+													   dev_yCoeff[2]*(dev_c_vx_y[5]-dev_c_vx_y[1])+
+													   dev_yCoeff[3]*(dev_c_vx_y[6]-dev_c_vx_y[0])+
+														 // dvy_dx (-)
+														 dev_xCoeff[0]*(shared_c_vy[ixLocal][izLocal]-shared_c_vy[ixLocal-1][izLocal])  +
+													   dev_xCoeff[1]*(shared_c_vy[ixLocal+1][izLocal]-shared_c_vy[ixLocal-2][izLocal])+
+													   dev_xCoeff[2]*(shared_c_vy[ixLocal+2][izLocal]-shared_c_vy[ixLocal-3][izLocal])+
+													   dev_xCoeff[3]*(shared_c_vy[ixLocal+3][izLocal]-shared_c_vy[ixLocal-4][izLocal])
+													);
+
+		//Scattering Sigmayz component
+		dev_sigmayz[iGlobal] = dev_dmuyz[iGlobal]*(
+														 // dvx_dz (-)
+														 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
+													   dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
+													   dev_zCoeff[2]*(shared_c_vx[ixLocal][izLocal+2]-shared_c_vx[ixLocal][izLocal-3])+
+													   dev_zCoeff[3]*(shared_c_vx[ixLocal][izLocal+3]-shared_c_vx[ixLocal][izLocal-4])+
+														 // dvz_dx (-)
+														 dev_xCoeff[0]*(shared_c_vz[ixLocal][izLocal]-shared_c_vz[ixLocal-1][izLocal])  +
+													   dev_xCoeff[1]*(shared_c_vz[ixLocal+1][izLocal]-shared_c_vz[ixLocal-2][izLocal])+
+													   dev_xCoeff[2]*(shared_c_vz[ixLocal+2][izLocal]-shared_c_vz[ixLocal-3][izLocal])+
+													   dev_xCoeff[3]*(shared_c_vz[ixLocal+3][izLocal]-shared_c_vz[ixLocal-4][izLocal])
+													);
+
+		// Move forward one grid point in the y-direction
+		iGlobal += yStride;
+
+	}
+
+}
+
+
+__global__ void imagingElaAdjGpu_3D(double* dev_o_vx, double* dev_c_vx, double* dev_n_vx, double* dev_o_vy, double* dev_c_vy, double* dev_n_vy, double* dev_o_vz, double* dev_c_vz, double* dev_n_vz, double* dev_vx, double* dev_vy, double* dev_vz, double* dev_sigmaxx, double* dev_sigmayy, double* dev_sigmazz, double* dev_sigmaxz, double* dev_sigmaxy, double* dev_sigmayz, double* dev_drhox, double* dev_drhoy, double* dev_drhoz, double* dev_dlame, double* dev_dmu, double* dev_dmuxz, double* dev_dmuxy, double* dev_dmuyz, int nx, int ny, int nz, int its){
+
+	// Allocate shared memory for a specific block
+	__shared__ double shared_c_vx[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vx wavefield y-slice block
+	__shared__ double shared_c_vy[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vy wavefield y-slice block
+	__shared__ double shared_c_vz[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vz wavefield y-slice block
+
+	// Global coordinates for the faster two axes (z and x)
+	long long izGlobal = FAT + blockIdx.x * BLOCK_SIZE_Z + threadIdx.x; // Coordinate of current thread on the z-axis
+	long long ixGlobal = FAT + blockIdx.y * BLOCK_SIZE_X + threadIdx.y; // Coordinate of current thread on the x-axis
+	// Local coordinates for the fastest two axes
+	long long izLocal = FAT + threadIdx.x; // z-coordinate on the local grid stored in shared memory
+	long long ixLocal = FAT + threadIdx.y; // x-coordinate on the local grid stored in shared memory
+
+	// Allocate the arrays that will store the wavefield values in the y-direction
+	// Only some components need the be used for derivative computation along the y axis
+	double dev_c_vx_y[2*FAT-1];
+	double dev_c_vy_y[2*FAT-1];
+	double dev_c_vz_y[2*FAT-1];
+
+	// Number of elements in one y-slice
+	long long yStride = nz * nx;
+
+	// Global index of the first element at which we are going to compute the Laplacian
+	// Skip the first FAT elements on the y-axis
+	long long iGlobal = FAT * yStride + nz * ixGlobal + izGlobal;
+
+	// Global index of the element with the smallest y-position needed to compute derivatives at iGlobal
+	long long iGlobalVx = iGlobal - FAT * yStride;
+	// Loading stride for Vx along the y-direction (backward derivative)
+	dev_c_vx_y[1] = dev_c_vx[iGlobalVx]; // iy = 0
+	dev_c_vx_y[2] = dev_c_vx[iGlobalVx+=yStride]; // iy = 1
+	dev_c_vx_y[3] = dev_c_vx[iGlobalVx+=yStride]; // iy = 2
+	shared_c_vx[ixLocal][izLocal] = dev_c_vx[iGlobalVx+=yStride]; // Only the central point on the y-axis is stored in the shared memory // iy = 3
+	dev_c_vx_y[4] = dev_c_vx[iGlobalVx+=yStride]; // iy = 4
+	dev_c_vx_y[5] = dev_c_vx[iGlobalVx+=yStride]; // iy = 5
+	dev_c_vx_y[6] = dev_c_vx[iGlobalVx+=yStride]; // iy = 6
+
+	// Loading for Vy along the y-direction (forward derivative)
+	long long iGlobalVy = iGlobal - (FAT-1) * yStride;
+	dev_c_vy_y[1] = dev_c_vy[iGlobalVy]; // iy = 1
+	dev_c_vy_y[2] = dev_c_vy[iGlobalVy+=yStride]; // iy = 2
+	shared_c_vy[ixLocal][izLocal] = dev_c_vy[iGlobalVy+=yStride]; // Only the central point on the y-axis is stored in the shared memory // iy = 3
+	dev_c_vy_y[3] = dev_c_vy[iGlobalVy+=yStride]; // iy = 4
+	dev_c_vy_y[4] = dev_c_vy[iGlobalVy+=yStride]; // iy = 5
+	dev_c_vy_y[5] = dev_c_vy[iGlobalVy+=yStride];// iy = 6
+	dev_c_vy_y[6] = dev_c_vy[iGlobalVy+=yStride]; // At that point, iyTemp = 2*FAT-1 // iy = 7
+
+	// Loading for Vz along the y-direction (backward derivative)
+	long long iGlobalVz = iGlobal - FAT * yStride;
+	dev_c_vz_y[1] = dev_c_vz[iGlobalVz]; // iy = 0
+	dev_c_vz_y[2] = dev_c_vz[iGlobalVz+=yStride]; // iy = 1
+	dev_c_vz_y[3] = dev_c_vz[iGlobalVz+=yStride]; // iy = 2
+	shared_c_vz[ixLocal][izLocal] = dev_c_vz[iGlobalVz+=yStride]; // Only the central point on the y-axis is stored in the shared memory // iy = 3
+	dev_c_vz_y[4] = dev_c_vz[iGlobalVz+=yStride]; // iy = 4
+	dev_c_vz_y[5] = dev_c_vz[iGlobalVz+=yStride]; // iy = 5
+	dev_c_vz_y[6] = dev_c_vz[iGlobalVz+=yStride]; // iy = 6
+
+	// Loop over y
+	for (long long iy=FAT; iy<ny-FAT; iy++){
+		// Update Vx values along the y-axis
+		dev_c_vx_y[0] = dev_c_vx_y[1];
+		dev_c_vx_y[1] = dev_c_vx_y[2];
+		dev_c_vx_y[2] = dev_c_vx_y[3];
+		dev_c_vx_y[3] = shared_c_vx[ixLocal][izLocal];
+		__syncthreads(); // Synchronize all threads within each block before updating the value of the shared memory at ixLocal, izLocal
+		shared_c_vx[ixLocal][izLocal] = dev_c_vx_y[4]; // Store the middle one in the shared memory (it will be re-used to compute the derivatives in the z- and x-directions)
+		dev_c_vx_y[4] = dev_c_vx_y[5];
+		dev_c_vx_y[5] = dev_c_vx_y[6];
+		dev_c_vx_y[6] = dev_c_vx[iGlobalVx+=yStride];
+
+		// Update Vy values along the y-axis
+		dev_c_vy_y[0] = dev_c_vy_y[1];
+		dev_c_vy_y[1] = dev_c_vy_y[2];
+		dev_c_vy_y[2] = shared_c_vy[ixLocal][izLocal];
+		shared_c_vy[ixLocal][izLocal] = dev_c_vy_y[3]; // Store the middle one in the shared memory (it will be re-used to compute the derivatives in the z- and x-directions)
+		dev_c_vy_y[3] = dev_c_vy_y[4];
+		dev_c_vy_y[4] = dev_c_vy_y[5];
+		dev_c_vy_y[5] = dev_c_vy_y[6];
+		dev_c_vy_y[6] = dev_c_vy[iGlobalVy+=yStride];
+
+		// Update Vz values along the y-axis
+		dev_c_vz_y[0] = dev_c_vz_y[1];
+		dev_c_vz_y[1] = dev_c_vz_y[2];
+		dev_c_vz_y[2] = dev_c_vz_y[3];
+		dev_c_vz_y[3] = shared_c_vz[ixLocal][izLocal];
+		shared_c_vz[ixLocal][izLocal] = dev_c_vz_y[4]; // Store the middle one in the shared memory (it will be re-used to compute the derivatives in the z- and x-directions)
+		dev_c_vz_y[4] = dev_c_vz_y[5];
+		dev_c_vz_y[5] = dev_c_vz_y[6];
+		dev_c_vz_y[6] = dev_c_vz[iGlobalVz+=yStride];
+
+		// Load the halos in the x-direction
+		// Threads with x-index ranging from 0,...,FAT will load the first and last FAT elements of the block on the x-axis to shared memory
+		if (threadIdx.y < FAT) {
+			shared_c_vx[threadIdx.y][izLocal] = dev_c_vx[iGlobal-nz*FAT]; // Left side
+			shared_c_vy[threadIdx.y][izLocal] = dev_c_vy[iGlobal-nz*FAT]; // Left side
+			shared_c_vz[threadIdx.y][izLocal] = dev_c_vz[iGlobal-nz*FAT]; // Left side
+
+			shared_c_vx[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vx[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_vy[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vy[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+			shared_c_vz[ixLocal+BLOCK_SIZE_X][izLocal] = dev_c_vz[iGlobal+nz*BLOCK_SIZE_X]; // Right side
+		}
+
+		// Load the halos in the z-direction
+		if (threadIdx.x < FAT) {
+			shared_c_vx[ixLocal][threadIdx.x] = dev_c_vx[iGlobal-FAT]; // Up
+			shared_c_vy[ixLocal][threadIdx.x] = dev_c_vy[iGlobal-FAT]; // Up
+			shared_c_vz[ixLocal][threadIdx.x] = dev_c_vz[iGlobal-FAT]; // Up
+
+			shared_c_vx[ixLocal][izLocal+BLOCK_SIZE_Z] = dev_c_vx[iGlobal+BLOCK_SIZE_Z]; // Down
+			shared_c_vy[ixLocal][izLocal+BLOCK_SIZE_Z] = dev_c_vy[iGlobal+BLOCK_SIZE_Z]; // Down
+			shared_c_vz[ixLocal][izLocal+BLOCK_SIZE_Z] = dev_c_vz[iGlobal+BLOCK_SIZE_Z]; // Down
+		}
+
+		// Wait until all threads of this block have loaded the slice y-slice into shared memory
+		__syncthreads(); // Synchronise all threads within each block
+
+		// Computing common derivative terms
+		// dvx/dx (+)
+		double dvx_dx = dev_xCoeff[0]*(shared_c_vx[ixLocal+1][izLocal]-shared_c_vx[ixLocal][izLocal])  +
+    								dev_xCoeff[1]*(shared_c_vx[ixLocal+2][izLocal]-shared_c_vx[ixLocal-1][izLocal])+
+    								dev_xCoeff[2]*(shared_c_vx[ixLocal+3][izLocal]-shared_c_vx[ixLocal-2][izLocal])+
+    								dev_xCoeff[3]*(shared_c_vx[ixLocal+4][izLocal]-shared_c_vx[ixLocal-3][izLocal]);
+		// dvy/dx (+)
+		double dvy_dy = dev_yCoeff[0]*(dev_c_vy_y[3]-shared_c_vy[ixLocal][izLocal]) +
+    								dev_yCoeff[1]*(dev_c_vy_y[4]-dev_c_vy_y[2])+
+    								dev_yCoeff[2]*(dev_c_vy_y[5]-dev_c_vy_y[1])+
+    								dev_yCoeff[3]*(dev_c_vy_y[6]-dev_c_vy_y[0]);
+		// dvz/dx (+)
+		double dvz_dz = dev_zCoeff[0]*(shared_c_vz[ixLocal][izLocal+1]-shared_c_vz[ixLocal][izLocal])  +
+    								dev_zCoeff[1]*(shared_c_vz[ixLocal][izLocal+2]-shared_c_vz[ixLocal][izLocal-1])+
+    								dev_zCoeff[2]*(shared_c_vz[ixLocal][izLocal+3]-shared_c_vz[ixLocal][izLocal-2])+
+    								dev_zCoeff[3]*(shared_c_vz[ixLocal][izLocal+4]-shared_c_vz[ixLocal][izLocal-3]);
+
+		//Note we assume zero wavefield for its < 0 and its > ntw
+    //Scattering Vx and Vz components (- drho * dvx/dt, - drho * dvy/dt , and - drho * dvz/dt)
+    if(its == 0){
+        dev_vx[iGlobal] = dev_drhox[iGlobal] * (- dev_n_vx[iGlobal])*dev_dts_inv;
+				dev_vy[iGlobal] = dev_drhoy[iGlobal] * (- dev_n_vy[iGlobal])*dev_dts_inv;
+        dev_vz[iGlobal] = dev_drhoz[iGlobal] * (- dev_n_vz[iGlobal])*dev_dts_inv;
+    } else if(its == dev_nts-1){
+        dev_vx[iGlobal] = dev_drhox[iGlobal] * (dev_o_vx[iGlobal])*dev_dts_inv;
+				dev_vy[iGlobal] = dev_drhoy[iGlobal] * (dev_o_vy[iGlobal])*dev_dts_inv;
+        dev_vz[iGlobal] = dev_drhoz[iGlobal] * (dev_o_vz[iGlobal])*dev_dts_inv;
+    } else {
+				dev_vx[iGlobal] = dev_drhox[iGlobal] * (dev_o_vx[iGlobal] - dev_n_vx[iGlobal])*dev_dts_inv;
+				dev_vy[iGlobal] = dev_drhoy[iGlobal] * (dev_o_vy[iGlobal] - dev_n_vy[iGlobal])*dev_dts_inv;
+        dev_vz[iGlobal] = dev_drhoz[iGlobal] * (dev_o_vz[iGlobal] - dev_n_vz[iGlobal])*dev_dts_inv;
+    }
+
+		double dvxyz_dxyz = dvx_dx + dvy_dy + dvz_dz;
+
+		//Scattering Sigmaxx component
+    dev_sigmaxx[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvx_dx;
+		//Scattering Sigmayy component
+    dev_sigmayy[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvy_dy;
+		//Scattering Sigmaxx component
+    dev_sigmazz[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvz_dz;
+		//Scattering Sigmaxz component
+		dev_sigmaxz[iGlobal] = dev_dmuxz[iGlobal]*(
+														 // dvx_dz (-)
+														 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
+														 dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
+														 dev_zCoeff[2]*(shared_c_vx[ixLocal][izLocal+2]-shared_c_vx[ixLocal][izLocal-3])+
+														 dev_zCoeff[3]*(shared_c_vx[ixLocal][izLocal+3]-shared_c_vx[ixLocal][izLocal-4])+
+														 // dvz_dx (-)
+														 dev_xCoeff[0]*(shared_c_vz[ixLocal][izLocal]-shared_c_vz[ixLocal-1][izLocal])  +
+														 dev_xCoeff[1]*(shared_c_vz[ixLocal+1][izLocal]-shared_c_vz[ixLocal-2][izLocal])+
+														 dev_xCoeff[2]*(shared_c_vz[ixLocal+2][izLocal]-shared_c_vz[ixLocal-3][izLocal])+
+														 dev_xCoeff[3]*(shared_c_vz[ixLocal+3][izLocal]-shared_c_vz[ixLocal-4][izLocal])
+													);
+
+		//Scattering Sigmaxy component
+		dev_sigmaxy[iGlobal] = dev_dmuxy[iGlobal]*(
+														 // dvx_dy (-)
+														 dev_yCoeff[0]*(shared_c_vx[ixLocal][izLocal]-dev_c_vx_y[3])  +
+													   dev_yCoeff[1]*(dev_c_vx_y[4]-dev_c_vx_y[2])+
+													   dev_yCoeff[2]*(dev_c_vx_y[5]-dev_c_vx_y[1])+
+													   dev_yCoeff[3]*(dev_c_vx_y[6]-dev_c_vx_y[0])+
+														 // dvy_dx (-)
+														 dev_xCoeff[0]*(shared_c_vy[ixLocal][izLocal]-shared_c_vy[ixLocal-1][izLocal])  +
+													   dev_xCoeff[1]*(shared_c_vy[ixLocal+1][izLocal]-shared_c_vy[ixLocal-2][izLocal])+
+													   dev_xCoeff[2]*(shared_c_vy[ixLocal+2][izLocal]-shared_c_vy[ixLocal-3][izLocal])+
+													   dev_xCoeff[3]*(shared_c_vy[ixLocal+3][izLocal]-shared_c_vy[ixLocal-4][izLocal])
+													);
+
+		//Scattering Sigmayz component
+		dev_sigmayz[iGlobal] = dev_dmuyz[iGlobal]*(
+														 // dvx_dz (-)
+														 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
+													   dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
+													   dev_zCoeff[2]*(shared_c_vx[ixLocal][izLocal+2]-shared_c_vx[ixLocal][izLocal-3])+
+													   dev_zCoeff[3]*(shared_c_vx[ixLocal][izLocal+3]-shared_c_vx[ixLocal][izLocal-4])+
+														 // dvz_dx (-)
+														 dev_xCoeff[0]*(shared_c_vz[ixLocal][izLocal]-shared_c_vz[ixLocal-1][izLocal])  +
+													   dev_xCoeff[1]*(shared_c_vz[ixLocal+1][izLocal]-shared_c_vz[ixLocal-2][izLocal])+
+													   dev_xCoeff[2]*(shared_c_vz[ixLocal+2][izLocal]-shared_c_vz[ixLocal-3][izLocal])+
+													   dev_xCoeff[3]*(shared_c_vz[ixLocal+3][izLocal]-shared_c_vz[ixLocal-4][izLocal])
+													);
+
+		// Move forward one grid point in the y-direction
+		iGlobal += yStride;
+
+	}
+
+}
