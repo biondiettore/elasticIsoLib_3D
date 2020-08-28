@@ -226,9 +226,9 @@ void nonlinearPropElasticGpu_3D::forward(const bool add, const std::shared_ptr<d
 	#pragma omp parallel for collapse(2)
   for(long long is = 0; is < _nSourcesRegCenterGrid; is++){ //loop over number of reg sources central grid
 		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
-			double mxx = 0;
-			double myy = 0;
-			double mzz = 0;
+			double mxx = 0.0;
+			double myy = 0.0;
+			double mzz = 0.0;
 			// mxx
 	  	mxx = (*modelRegDts_sigmaxx->_mat)[is][it] * _fdParamElastic->_lamb2MuDtw[(_sourcesCenterGrid->getRegPosUnique())[is]]+
 								((*modelRegDts_sigmayy->_mat)[is][it] + (*modelRegDts_sigmazz->_mat)[is][it] ) * _fdParamElastic->_lambDtw[(_sourcesCenterGrid->getRegPosUnique())[is]];
@@ -255,7 +255,7 @@ void nonlinearPropElasticGpu_3D::forward(const bool add, const std::shared_ptr<d
 	#pragma omp parallel for collapse(2)
   for(long long is = 0; is < _nSourcesRegXYGrid; is++){ //loop over number of reg sources xy grid
 		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
-	  		(*modelRegDts_sigmaxy->_mat)[is][it] *= _fdParamElastic->_muxyDtw[(_sourcesYZGrid->getRegPosUnique())[is]];
+	  		(*modelRegDts_sigmaxy->_mat)[is][it] *= _fdParamElastic->_muxyDtw[(_sourcesXYGrid->getRegPosUnique())[is]];
 		}
   }
 	// myz
@@ -536,14 +536,14 @@ void nonlinearPropElasticGpu_3D::adjoint(const bool add, const std::shared_ptr<d
 	#pragma omp parallel for collapse(2)
   for(long long ir = 0; ir < _nReceiversRegXYGrid; ir++){ //loop over number of reg receiver xy grid
 		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
-	  		(*dataRegDts_sigmaxy->_mat)[ir][it] *= _fdParamElastic->_muxzDtw[(_receiversXYGrid->getRegPosUnique())[ir]];
+	  		(*dataRegDts_sigmaxy->_mat)[ir][it] *= _fdParamElastic->_muxyDtw[(_receiversXYGrid->getRegPosUnique())[ir]];
 		}
   }
 	// Syz
 	#pragma omp parallel for collapse(2)
   for(long long ir = 0; ir < _nReceiversRegYZGrid; ir++){ //loop over number of reg receiver yz grid
 		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
-	  		(*dataRegDts_sigmayz->_mat)[ir][it] *= _fdParamElastic->_muxzDtw[(_receiversYZGrid->getRegPosUnique())[ir]];
+	  		(*dataRegDts_sigmayz->_mat)[ir][it] *= _fdParamElastic->_muyzDtw[(_receiversYZGrid->getRegPosUnique())[ir]];
 		}
   }
 

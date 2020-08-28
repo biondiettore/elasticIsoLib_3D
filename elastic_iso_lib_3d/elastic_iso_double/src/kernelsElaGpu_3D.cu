@@ -1215,31 +1215,27 @@ __global__ void imagingElaAdjGpu_3D(double* dev_o_vx, double* dev_c_vx, double* 
     								dev_zCoeff[3]*(shared_c_vz[ixLocal][izLocal+4]-shared_c_vz[ixLocal][izLocal-3]);
 
 		//Note we assume zero wavefield for its < 0 and its > ntw
-    //Scattering Vx and Vz components (- drho * dvx/dt, - drho * dvy/dt , and - drho * dvz/dt)
+    //Imaging rhox, rhoy, rhoz
     if(its == 0){
-        dev_vx[iGlobal] = dev_drhox[iGlobal] * (- dev_n_vx[iGlobal])*dev_dts_inv;
-				dev_vy[iGlobal] = dev_drhoy[iGlobal] * (- dev_n_vy[iGlobal])*dev_dts_inv;
-        dev_vz[iGlobal] = dev_drhoz[iGlobal] * (- dev_n_vz[iGlobal])*dev_dts_inv;
+        dev_drhox[iGlobal] += dev_vx[iGlobal] * (- dev_n_vx[iGlobal])*dev_dts_inv;
+				dev_drhoy[iGlobal] += dev_vy[iGlobal] * (- dev_n_vy[iGlobal])*dev_dts_inv;
+        dev_drhoz[iGlobal] += dev_vz[iGlobal] * (- dev_n_vz[iGlobal])*dev_dts_inv;
     } else if(its == dev_nts-1){
-        dev_vx[iGlobal] = dev_drhox[iGlobal] * (dev_o_vx[iGlobal])*dev_dts_inv;
-				dev_vy[iGlobal] = dev_drhoy[iGlobal] * (dev_o_vy[iGlobal])*dev_dts_inv;
-        dev_vz[iGlobal] = dev_drhoz[iGlobal] * (dev_o_vz[iGlobal])*dev_dts_inv;
+        dev_drhox[iGlobal] += dev_vx[iGlobal] * (dev_o_vx[iGlobal])*dev_dts_inv;
+				dev_drhoy[iGlobal] += dev_vy[iGlobal] * (dev_o_vy[iGlobal])*dev_dts_inv;
+        dev_drhoz[iGlobal] += dev_vz[iGlobal] * (dev_o_vz[iGlobal])*dev_dts_inv;
     } else {
-				dev_vx[iGlobal] = dev_drhox[iGlobal] * (dev_o_vx[iGlobal] - dev_n_vx[iGlobal])*dev_dts_inv;
-				dev_vy[iGlobal] = dev_drhoy[iGlobal] * (dev_o_vy[iGlobal] - dev_n_vy[iGlobal])*dev_dts_inv;
-        dev_vz[iGlobal] = dev_drhoz[iGlobal] * (dev_o_vz[iGlobal] - dev_n_vz[iGlobal])*dev_dts_inv;
+				dev_drhox[iGlobal] += dev_vx[iGlobal] * (dev_o_vx[iGlobal] - dev_n_vx[iGlobal])*dev_dts_inv;
+				dev_drhoy[iGlobal] += dev_vy[iGlobal] * (dev_o_vy[iGlobal] - dev_n_vy[iGlobal])*dev_dts_inv;
+        dev_drhoz[iGlobal] += dev_vz[iGlobal] * (dev_o_vz[iGlobal] - dev_n_vz[iGlobal])*dev_dts_inv;
     }
 
-		double dvxyz_dxyz = dvx_dx + dvy_dy + dvz_dz;
-
-		//Scattering Sigmaxx component
-    dev_sigmaxx[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvx_dx;
-		//Scattering Sigmayy component
-    dev_sigmayy[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvy_dy;
-		//Scattering Sigmaxx component
-    dev_sigmazz[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvz_dz;
-		//Scattering Sigmaxz component
-		dev_sigmaxz[iGlobal] = dev_dmuxz[iGlobal]*(
+		//Imaging lame
+		dev_dlame[iGlobal] += (dev_sigmaxx[iGlobal] + dev_sigmayy[iGlobal] + dev_sigmazz[iGlobal]) * (dvx_dx + dvy_dy + dvz_dz);
+		//Imaging mu
+		dev_dmu[iGlobal] += 2.0 * (dvx_dx*dev_sigmaxx[iGlobal] + dvy_dy*dev_sigmayy[iGlobal] + dvz_dz*dev_sigmazz[iGlobal]);
+		//Imaging muxz
+		dev_dmuxz[iGlobal] += dev_sigmaxz[iGlobal]*(
 														 // dvx_dz (-)
 														 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
 														 dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
@@ -1252,8 +1248,8 @@ __global__ void imagingElaAdjGpu_3D(double* dev_o_vx, double* dev_c_vx, double* 
 														 dev_xCoeff[3]*(shared_c_vz[ixLocal+3][izLocal]-shared_c_vz[ixLocal-4][izLocal])
 													);
 
-		//Scattering Sigmaxy component
-		dev_sigmaxy[iGlobal] = dev_dmuxy[iGlobal]*(
+		//Imaging muxy
+		dev_dmuxy[iGlobal] += dev_sigmaxy[iGlobal]*(
 														 // dvx_dy (-)
 														 dev_yCoeff[0]*(shared_c_vx[ixLocal][izLocal]-dev_c_vx_y[3])  +
 													   dev_yCoeff[1]*(dev_c_vx_y[4]-dev_c_vx_y[2])+
@@ -1266,8 +1262,8 @@ __global__ void imagingElaAdjGpu_3D(double* dev_o_vx, double* dev_c_vx, double* 
 													   dev_xCoeff[3]*(shared_c_vy[ixLocal+3][izLocal]-shared_c_vy[ixLocal-4][izLocal])
 													);
 
-		//Scattering Sigmayz component
-		dev_sigmayz[iGlobal] = dev_dmuyz[iGlobal]*(
+		//Imaging muyz
+		dev_dmuyz[iGlobal] += dev_sigmayz[iGlobal]*(
 														 // dvx_dz (-)
 														 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
 													   dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
