@@ -280,7 +280,7 @@ if __name__ == '__main__':
 	print("Maximum x receiver coordinate = %s"%max_rec_x)
 	print("Maximum y receiver coordinate = %s"%max_rec_y)
 	print("Minimum x receiver coordinate = %s"%min_rec_x)
-	print("Minimum y receiver coordinate = %s"%min_rec_x)
+	print("Minimum y receiver coordinate = %s"%min_rec_y)
 
 	# Checking if any receiver or shot is outside of the propagation boundaries
 	if ox-min_shot_x > xError or max_shot_x-max_x > xError or oy-min_shot_y > yError or max_shot_y-max_y > yError or not oz-zError < depth_source < max_z+zError:
