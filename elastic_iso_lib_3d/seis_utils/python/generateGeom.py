@@ -135,8 +135,8 @@ if __name__ == '__main__':
 		firstShotx, firstShoty, firstShotz = parObject.getFloats("firstShotPos", [ox,oy,oz])
 		ns_inline = parObject.getInt("nShot_inline")
 		ns_crossline = parObject.getInt("nShot_crossline")
-		ds_inline = parObject.getInt("dShot_inline")
-		ds_crossline = parObject.getInt("dShot_crossline")
+		ds_inline = parObject.getFloat("dShot_inline")
+		ds_crossline = parObject.getFloat("dShot_crossline")
 		inline_dir = parObject.getString("inline_dir","X")
 		Nshots = ns_inline*ns_crossline
 
