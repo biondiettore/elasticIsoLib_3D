@@ -872,7 +872,10 @@ __global__ void dampCosineEdge_3D(double *dev_p1_vx, double *dev_p2_vx, double *
 /******************************************************************************/
 /**************************** Scattering/Imaging ******************************/
 /******************************************************************************/
-__global__ void imagingElaFwdGpu_3D(double* dev_o_vx, double* dev_c_vx, double* dev_n_vx, double* dev_o_vy, double* dev_c_vy, double* dev_n_vy, double* dev_o_vz, double* dev_c_vz, double* dev_n_vz, double* dev_vx, double* dev_vy, double* dev_vz, double* dev_sigmaxx, double* dev_sigmayy, double* dev_sigmazz, double* dev_sigmaxz, double* dev_sigmaxy, double* dev_sigmayz, double* dev_drhox, double* dev_drhoy, double* dev_drhoz, double* dev_dlame, double* dev_dmu, double* dev_dmuxz, double* dev_dmuxy, double* dev_dmuyz, int nx, int ny, int nz, int its){
+__global__ void imagingElaFwdGpu_3D(double* dev_o_vx, double* dev_c_vx, double* dev_n_vx, double* dev_o_vy, double* dev_c_vy, double* dev_n_vy, double* dev_o_vz, double* dev_c_vz, double* dev_n_vz, double* dev_vx, double* dev_vy, double* dev_vz, double* dev_sigmaxx, double* dev_sigmayy, double* dev_sigmazz, double* dev_sigmaxz, double* dev_sigmaxy, double* dev_sigmayz, double* dev_drhox, double* dev_drhoy, double* dev_drhoz, double* dev_dlame, double* dev_dmu, double* dev_dmuxz, double* dev_dmuxy, double* dev_dmuyz, double* dev_lamb2MuDtw, double* dev_lambDtw, int nx, int ny, int nz, int its){
+
+	// The drho_i and dmu_ij have been already scaled by the  source scaling factor deriving by the propagation operator
+	// dlame, d_mu have not been scaled and they will be by dev_lamb2MuDtw and dev_lambDtw appropriately
 
 	// Allocate shared memory for a specific block
 	__shared__ double shared_c_vx[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vx wavefield y-slice block
@@ -1030,6 +1033,16 @@ __global__ void imagingElaFwdGpu_3D(double* dev_o_vx, double* dev_c_vx, double* 
     dev_sigmayy[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvy_dy;
 		//Scattering Sigmaxx component
     dev_sigmazz[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvz_dz;
+
+		// Component mixing due to source scaling factor
+		double mxx, myy, mzz;
+		mxx = dev_sigmaxx[iGlobal] * dev_lamb2MuDtw[iGlobal] + (dev_sigmayy[iGlobal] + dev_sigmazz[iGlobal]) * dev_lambDtw[iGlobal];
+		myy = dev_sigmayy[iGlobal] * dev_lamb2MuDtw[iGlobal] + (dev_sigmaxx[iGlobal] + dev_sigmazz[iGlobal]) * dev_lambDtw[iGlobal];
+		mzz = dev_sigmazz[iGlobal] * dev_lamb2MuDtw[iGlobal] + (dev_sigmaxx[iGlobal] + dev_sigmayy[iGlobal]) * dev_lambDtw[iGlobal];
+		dev_sigmaxx[iGlobal] = mxx;
+		dev_sigmayy[iGlobal] = myy;
+		dev_sigmazz[iGlobal] = mzz;
+
 		//Scattering Sigmaxz component
 		dev_sigmaxz[iGlobal] = dev_dmuxz[iGlobal]*(
 														 // dvx_dz (-)
@@ -1081,6 +1094,8 @@ __global__ void imagingElaFwdGpu_3D(double* dev_o_vx, double* dev_c_vx, double* 
 
 
 __global__ void imagingElaAdjGpu_3D(double* dev_o_vx, double* dev_c_vx, double* dev_n_vx, double* dev_o_vy, double* dev_c_vy, double* dev_n_vy, double* dev_o_vz, double* dev_c_vz, double* dev_n_vz, double* dev_vx, double* dev_vy, double* dev_vz, double* dev_sigmaxx, double* dev_sigmayy, double* dev_sigmazz, double* dev_sigmaxz, double* dev_sigmaxy, double* dev_sigmayz, double* dev_drhox, double* dev_drhoy, double* dev_drhoz, double* dev_dlame, double* dev_dmu, double* dev_dmuxz, double* dev_dmuxy, double* dev_dmuyz, int nx, int ny, int nz, int its){
+
+	// The perturbations dev_drho_i, dev_dlame, dev_dmu, dev_mu_ij must not be scaled to being able to apply "self-adjoint" operators
 
 	// Allocate shared memory for a specific block
 	__shared__ double shared_c_vx[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vx wavefield y-slice block
@@ -1282,3 +1297,88 @@ __global__ void imagingElaAdjGpu_3D(double* dev_o_vx, double* dev_c_vx, double* 
 	}
 
 }
+
+/****************************************************************************************/
+/******************************** Wavefield Interpolation *******************************/
+/****************************************************************************************/
+__global__ void interpWavefieldVxVyVz_3D(double *dev_wavefieldVx_left, double *dev_wavefieldVx_right, double *dev_wavefieldVy_left, double *dev_wavefieldVy_right, double *dev_wavefieldVz_left, double *dev_wavefieldVz_right, double *dev_timeSliceVx, double *dev_timeSliceVy, double *dev_timeSliceVz, int nx, int ny, int nz, int it2) {
+
+    long long izGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Global z-coordinate
+    long long ixGlobal = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // Global x-coordinate
+
+		// Number of elements in one y-slice
+		long long yStride = nz * nx;
+
+		// Global index of the first element at which we are going to compute the Laplacian
+		// Skip the first FAT elements on the y-axis
+		long long iGlobal = FAT * yStride + nz * ixGlobal + izGlobal;
+
+		// Loop over y
+		for (long long iy=FAT; iy<ny-FAT; iy++){
+			// Interpolating Vx and Vz
+	    dev_wavefieldVx_left[iGlobal] += dev_timeSliceVx[iGlobal] * dev_timeInterpFilter[it2]; // its
+	    dev_wavefieldVx_right[iGlobal] += dev_timeSliceVx[iGlobal] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2]; // its+1
+			dev_wavefieldVy_left[iGlobal] += dev_timeSliceVy[iGlobal] * dev_timeInterpFilter[it2]; // its
+	    dev_wavefieldVy_right[iGlobal] += dev_timeSliceVy[iGlobal] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2]; // its+1
+			dev_wavefieldVz_left[iGlobal] += dev_timeSliceVz[iGlobal] * dev_timeInterpFilter[it2]; // its
+	    dev_wavefieldVz_right[iGlobal] += dev_timeSliceVz[iGlobal] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2]; // its+1
+
+			// Move forward one grid point in the y-direction
+			iGlobal += yStride;
+		}
+
+}
+
+/* Interpolate and inject secondary source at fine time-sampling */
+__global__ void injectSecondarySource_3D(double *dev_ssLeft, double *dev_ssRight, double *dev_p0, int nx, int ny, int nz, int indexFilter){
+	long long izGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Global z-coordinate
+	long long ixGlobal = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // Global x-coordinate
+
+	// Number of elements in one y-slice
+	long long yStride = nz * nx;
+
+	// Global index of the first element at which we are going to compute the Laplacian
+	// Skip the first FAT elements on the y-axis
+	long long iGlobal = FAT * yStride + nz * ixGlobal + izGlobal;
+
+	// Loop over y
+	for (long long iy=FAT; iy<ny-FAT; iy++){
+	  dev_p0[iGlobal] += dev_ssLeft[iGlobal] * dev_timeInterpFilter[indexFilter] + dev_ssRight[iGlobal] * dev_timeInterpFilter[dev_hTimeInterpFilter+indexFilter];
+
+		// Move forward one grid point in the y-direction
+		iGlobal += yStride;
+	}
+}
+__global__ void extractInterpAdjointWavefield_3D(double *dev_timeSliceLeft, double *dev_timeSliceRight, double *dev_timeSliceFine, int nx, int ny, int nz, int it2) {
+
+	long long izGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Global z-coordinate
+	long long ixGlobal = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // Global x-coordinate
+
+	// Number of elements in one y-slice
+	long long yStride = nz * nx;
+
+	// Global index of the first element at which we are going to compute the Laplacian
+	// Skip the first FAT elements on the y-axis
+	long long iGlobal = FAT * yStride + nz * ixGlobal + izGlobal;
+
+	// Loop over y
+	for (long long iy=FAT; iy<ny-FAT; iy++){
+	  dev_timeSliceLeft[iGlobal]  += dev_timeSliceFine[iGlobal] * dev_timeInterpFilter[it2]; // its
+	  dev_timeSliceRight[iGlobal] += dev_timeSliceFine[iGlobal] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2]; // its+1
+
+		// Move forward one grid point in the y-direction
+		iGlobal += yStride;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+//
