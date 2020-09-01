@@ -74,70 +74,155 @@ void seismicElasticOperator3D <V1, V2>::setSources_3D(std::shared_ptr<spaceInter
 	//Constructing source term
 	_sourcesSignals = sourcesSignals->clone();
 
-	//Memory allocation
-	// std::shared_ptr<double2DReg> sourceTemp_vx(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregXGrid));
-	// std::shared_ptr<double2DReg> sourceTemp_vz(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregZGrid));
-	// std::shared_ptr<double2DReg> sourceTemp_sigmaxx(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregCenterGrid));
-	// std::shared_ptr<double2DReg> sourceTemp_sigmazz(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregCenterGrid));
-	// std::shared_ptr<double2DReg> sourceTemp_sigmaxz(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregXZGrid));
-	//
-	// std::shared_ptr<double2DReg> sourceRegDts_vx(new double2DReg(_fdParamElastic->_nts, _nSourcesRegXGrid));
-	// std::shared_ptr<double2DReg> sourceRegDts_vz(new double2DReg(_fdParamElastic->_nts, _nSourcesRegZGrid));
-	// std::shared_ptr<double2DReg> sourceRegDts_sigmaxx(new double2DReg(_fdParamElastic->_nts, _nSourcesRegCenterGrid));
-	// std::shared_ptr<double2DReg> sourceRegDts_sigmazz(new double2DReg(_fdParamElastic->_nts, _nSourcesRegCenterGrid));
-	// std::shared_ptr<double2DReg> sourceRegDts_sigmaxz(new double2DReg(_fdParamElastic->_nts, _nSourcesRegXZGrid));
-	//
-	// _sourceRegDtw_vx = std::make_shared<double2DReg>(_fdParamElastic->_ntw, _nSourcesRegXGrid);
-	// _sourceRegDtw_vz = std::make_shared<double2DReg>(_fdParamElastic->_ntw, _nSourcesRegZGrid);
-	// _sourceRegDtw_sigmaxx = std::make_shared<double2DReg>(_fdParamElastic->_ntw, _nSourcesRegCenterGrid);
-	// _sourceRegDtw_sigmazz = std::make_shared<double2DReg>(_fdParamElastic->_ntw, _nSourcesRegCenterGrid);
-	// _sourceRegDtw_sigmaxz = std::make_shared<double2DReg>(_fdParamElastic->_ntw, _nSourcesRegXZGrid);
-	//
-	// /* Copy from 3d source to respective 2d source components */
-	// std::memcpy( sourceTemp_vx->getVals(), _sourcesSignals->getVals(), _nSourcesIrregXGrid*_fdParamElastic->_nts*sizeof(double) );
-	// std::memcpy( sourceTemp_vz->getVals(), _sourcesSignals->getVals()+_nSourcesIrregXGrid*_fdParamElastic->_nts, _nSourcesIrregZGrid*_fdParamElastic->_nts*sizeof(double) );
-	// std::memcpy( sourceTemp_sigmaxx->getVals(), _sourcesSignals->getVals()+(_nSourcesIrregXGrid+_nSourcesIrregZGrid)*_fdParamElastic->_nts, _nSourcesIrregCenterGrid*_fdParamElastic->_nts*sizeof(double) );
-	// std::memcpy( sourceTemp_sigmazz->getVals(), _sourcesSignals->getVals()+(_nSourcesIrregXGrid+_nSourcesIrregZGrid+_nSourcesIrregCenterGrid)*_fdParamElastic->_nts, _nSourcesIrregCenterGrid*_fdParamElastic->_nts*sizeof(double) );
-	// std::memcpy( sourceTemp_sigmaxz->getVals(), _sourcesSignals->getVals()+(_nSourcesIrregXGrid+_nSourcesIrregZGrid+2*_nSourcesIrregCenterGrid)*_fdParamElastic->_nts, _nSourcesIrregXZGrid*_fdParamElastic->_nts*sizeof(double) );
-	//
-	// /* Interpolate source (seismic source) to regular grid */
-	// _sourcesXGrid->adjoint(false, sourceRegDts_vx, sourceTemp_vx);
-	// _sourcesZGrid->adjoint(false, sourceRegDts_vz, sourceTemp_vz);
-	// _sourcesCenterGrid->adjoint(false, sourceRegDts_sigmaxx, sourceTemp_sigmaxx);
-	// _sourcesCenterGrid->adjoint(false, sourceRegDts_sigmazz, sourceTemp_sigmazz);
-	// _sourcesXZGrid->adjoint(false, sourceRegDts_sigmaxz, sourceTemp_sigmaxz);
-	//
-	// /* Scale source signals */
-	// sourceRegDts_sigmaxx->scale(2.0*_fdParamElastic->_dtw);
-	// sourceRegDts_sigmazz->scale(2.0*_fdParamElastic->_dtw);
-	// #pragma omp parallel for collapse(2)
-	// for(int is = 0; is < _nSourcesRegXGrid; is++){ //loop over number of reg sources x grid
-	// 	for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
-	//   		(*sourceRegDts_vx->_mat)[is][it] *= _fdParamElastic->_rhoxDtw[(_sourcesXGrid->getRegPosUnique())[is]];
-	// 	}
-	// }
-	// #pragma omp parallel for collapse(2)
-	// for(int is = 0; is < _nSourcesRegZGrid; is++){ //loop over number of reg sources z grid
-	// 	for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
-	// 		(*sourceRegDts_vz->_mat)[is][it] *= _fdParamElastic->_rhozDtw[(_sourcesZGrid->getRegPosUnique())[is]];
-	// 	}
-	// }
-	// sourceRegDts_sigmaxz->scale(2.0*_fdParamElastic->_dtw);
-	//
-	// /*Scaling by the inverse of the space discretization*/
-	// double area_scale = 1.0/(_fdParamElastic->_dx * _fdParamElastic->_dz);
-	// sourceRegDts_sigmaxx->scale(area_scale);
-	// sourceRegDts_sigmazz->scale(area_scale);
-	// sourceRegDts_vx->scale(area_scale);
-	// sourceRegDts_vz->scale(area_scale);
-	// sourceRegDts_sigmaxz->scale(area_scale);
-	//
-	// /* Interpolate to fine time-sampling */
-	// _timeInterp->forward(false, sourceRegDts_vx, _sourceRegDtw_vx);
-	// _timeInterp->forward(false, sourceRegDts_vz, _sourceRegDtw_vz);
-	// _timeInterp->forward(false, sourceRegDts_sigmaxx, _sourceRegDtw_sigmaxx);
-	// _timeInterp->forward(false, sourceRegDts_sigmazz, _sourceRegDtw_sigmazz);
-	// _timeInterp->forward(false, sourceRegDts_sigmaxz, _sourceRegDtw_sigmaxz);
+	/* Allocation */
+  std::shared_ptr<double2DReg> sourceIrreg_vx(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregXGrid));
+	std::shared_ptr<double2DReg> sourceIrreg_vy(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregYGrid));
+  std::shared_ptr<double2DReg> sourceIrreg_vz(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregZGrid));
+  std::shared_ptr<double2DReg> sourceIrreg_sigmaxx(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregCenterGrid));
+	std::shared_ptr<double2DReg> sourceIrreg_sigmayy(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregCenterGrid));
+  std::shared_ptr<double2DReg> sourceIrreg_sigmazz(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregCenterGrid));
+  std::shared_ptr<double2DReg> sourceIrreg_sigmaxz(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregXZGrid));
+	std::shared_ptr<double2DReg> sourceIrreg_sigmaxy(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregXYGrid));
+	std::shared_ptr<double2DReg> sourceIrreg_sigmayz(new double2DReg(_fdParamElastic->_nts, _nSourcesIrregYZGrid));
+
+	_sourceRegDtw_vx = std::make_shared<double2DReg>(_fdParamElastic->_nts, _nSourcesRegXGrid);
+	_sourceRegDtw_vy = std::make_shared<double2DReg>(_fdParamElastic->_nts, _nSourcesRegYGrid);
+	_sourceRegDtw_vz = std::make_shared<double2DReg>(_fdParamElastic->_nts, _nSourcesRegZGrid);
+	_sourceRegDtw_sigmaxx = std::make_shared<double2DReg>(_fdParamElastic->_nts, _nSourcesRegCenterGrid);
+	_sourceRegDtw_sigmayy = std::make_shared<double2DReg>(_fdParamElastic->_nts, _nSourcesRegCenterGrid);
+	_sourceRegDtw_sigmazz = std::make_shared<double2DReg>(_fdParamElastic->_nts, _nSourcesRegCenterGrid);
+	_sourceRegDtw_sigmaxz = std::make_shared<double2DReg>(_fdParamElastic->_nts, _nSourcesRegXZGrid);
+	_sourceRegDtw_sigmaxy = std::make_shared<double2DReg>(_fdParamElastic->_nts, _nSourcesRegXYGrid);
+	_sourceRegDtw_sigmayz = std::make_shared<double2DReg>(_fdParamElastic->_nts, _nSourcesRegYZGrid);
+
+	/* Copy from 3d source to respective 2d source components */
+	// fx
+	long long shift;
+	long long chunk = _nSourcesIrregXGrid*_fdParamElastic->_nts;
+  std::memcpy(sourceIrreg_vx->getVals(), _sourcesSignals->getVals(), chunk*sizeof(double));
+	// fy
+	shift = chunk;
+	chunk = _nSourcesIrregYGrid*_fdParamElastic->_nts;
+  std::memcpy(sourceIrreg_vy->getVals(), _sourcesSignals->getVals()+shift, chunk*sizeof(double));
+	// fz
+	shift += chunk;
+	chunk = _nSourcesIrregZGrid*_fdParamElastic->_nts;
+  std::memcpy(sourceIrreg_vz->getVals(), _sourcesSignals->getVals()+shift, chunk*sizeof(double));
+	// mxx
+	shift += chunk;
+	chunk = _nSourcesIrregCenterGrid*_fdParamElastic->_nts;
+  std::memcpy(sourceIrreg_sigmaxx->getVals(), _sourcesSignals->getVals()+shift, chunk*sizeof(double));
+	// myy
+	shift += chunk;
+	chunk = _nSourcesIrregCenterGrid*_fdParamElastic->_nts;
+  std::memcpy(sourceIrreg_sigmayy->getVals(), _sourcesSignals->getVals()+shift, chunk*sizeof(double));
+	// mzz
+	shift += chunk;
+	chunk = _nSourcesIrregCenterGrid*_fdParamElastic->_nts;
+  std::memcpy(sourceIrreg_sigmazz->getVals(), _sourcesSignals->getVals()+shift, chunk*sizeof(double));
+	// mxz
+	shift += chunk;
+	chunk = _nSourcesIrregXZGrid*_fdParamElastic->_nts;
+  std::memcpy(sourceIrreg_sigmaxz->getVals(), _sourcesSignals->getVals()+shift, chunk*sizeof(double));
+	// mxz
+	shift += chunk;
+	chunk = _nSourcesIrregXYGrid*_fdParamElastic->_nts;
+  std::memcpy(sourceIrreg_sigmaxy->getVals(), _sourcesSignals->getVals()+shift, chunk*sizeof(double));
+	// myz
+	shift += chunk;
+	chunk = _nSourcesIrregYZGrid*_fdParamElastic->_nts;
+  std::memcpy(sourceIrreg_sigmayz->getVals(), _sourcesSignals->getVals()+shift, chunk*sizeof(double));
+
+	/* Interpolate source (seismic source) to regular grid */
+	_sourcesXGrid->adjoint(false, _sourceRegDtw_vx, sourceIrreg_vx);
+	_sourcesYGrid->adjoint(false, _sourceRegDtw_vy, sourceIrreg_vy);
+	_sourcesZGrid->adjoint(false, _sourceRegDtw_vz, sourceIrreg_vz);
+	_sourcesCenterGrid->adjoint(false, _sourceRegDtw_sigmaxx, sourceIrreg_sigmaxx);
+	_sourcesCenterGrid->adjoint(false, _sourceRegDtw_sigmayy, sourceIrreg_sigmayy);
+	_sourcesCenterGrid->adjoint(false, _sourceRegDtw_sigmazz, sourceIrreg_sigmazz);
+	_sourcesXZGrid->adjoint(false, _sourceRegDtw_sigmaxz, sourceIrreg_sigmaxz);
+	_sourcesXYGrid->adjoint(false, _sourceRegDtw_sigmaxy, sourceIrreg_sigmaxy);
+	_sourcesYZGrid->adjoint(false, _sourceRegDtw_sigmayz, sourceIrreg_sigmayz);
+
+	/* Scale source signals */
+	/* Scale source signals model */
+	// fx
+	#pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegXGrid; is++){ //loop over number of reg sources x grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+	  		(*_sourceRegDtw_vx->_mat)[is][it] *= _fdParamElastic->_rhoxDtw[(_sourcesXGrid->getRegPosUnique())[is]];
+		}
+  }
+	// fy
+	#pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegYGrid; is++){ //loop over number of reg sources y grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+	  		(*_sourceRegDtw_vy->_mat)[is][it] *= _fdParamElastic->_rhoyDtw[(_sourcesYGrid->getRegPosUnique())[is]];
+		}
+  }
+	// fz
+  #pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegZGrid; is++){ //loop over number of reg sources z grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+	  		(*_sourceRegDtw_vz->_mat)[is][it] *= _fdParamElastic->_rhozDtw[(_sourcesZGrid->getRegPosUnique())[is]];
+		}
+  }
+
+	// moment tensor components
+	#pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegCenterGrid; is++){ //loop over number of reg sources central grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+			double mxx = 0.0;
+			double myy = 0.0;
+			double mzz = 0.0;
+			// mxx
+	  	mxx = (*_sourceRegDtw_sigmaxx->_mat)[is][it] * _fdParamElastic->_lamb2MuDtw[(_sourcesCenterGrid->getRegPosUnique())[is]]+
+								((*_sourceRegDtw_sigmayy->_mat)[is][it] + (*_sourceRegDtw_sigmazz->_mat)[is][it] ) * _fdParamElastic->_lambDtw[(_sourcesCenterGrid->getRegPosUnique())[is]];
+			// myy
+			myy = (*_sourceRegDtw_sigmayy->_mat)[is][it] * _fdParamElastic->_lamb2MuDtw[(_sourcesCenterGrid->getRegPosUnique())[is]]+
+								((*_sourceRegDtw_sigmaxx->_mat)[is][it] + (*_sourceRegDtw_sigmazz->_mat)[is][it] ) * _fdParamElastic->_lambDtw[(_sourcesCenterGrid->getRegPosUnique())[is]];
+			// mzz
+			mzz = (*_sourceRegDtw_sigmazz->_mat)[is][it] * _fdParamElastic->_lamb2MuDtw[(_sourcesCenterGrid->getRegPosUnique())[is]]+
+								((*_sourceRegDtw_sigmaxx->_mat)[is][it] + (*_sourceRegDtw_sigmayy->_mat)[is][it] ) * _fdParamElastic->_lambDtw[(_sourcesCenterGrid->getRegPosUnique())[is]];
+		  // Setting values
+			(*_sourceRegDtw_sigmaxx->_mat)[is][it] = mxx;
+			(*_sourceRegDtw_sigmayy->_mat)[is][it] = myy;
+			(*_sourceRegDtw_sigmazz->_mat)[is][it] = mzz;
+		}
+  }
+	// mxz
+	#pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegXZGrid; is++){ //loop over number of reg sources xz grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+	  		(*_sourceRegDtw_sigmaxz->_mat)[is][it] *= _fdParamElastic->_muxzDtw[(_sourcesXZGrid->getRegPosUnique())[is]];
+		}
+  }
+	// mxy
+	#pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegXYGrid; is++){ //loop over number of reg sources xy grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+	  		(*_sourceRegDtw_sigmaxy->_mat)[is][it] *= _fdParamElastic->_muxyDtw[(_sourcesXYGrid->getRegPosUnique())[is]];
+		}
+  }
+	// myz
+	#pragma omp parallel for collapse(2)
+  for(long long is = 0; is < _nSourcesRegYZGrid; is++){ //loop over number of reg sources yz grid
+		for(int it = 0; it < _fdParamElastic->_nts; it++){ //loop over time steps
+	  		(*_sourceRegDtw_sigmayz->_mat)[is][it] *= _fdParamElastic->_muyzDtw[(_sourcesYZGrid->getRegPosUnique())[is]];
+		}
+  }
+
+	/*Scaling by the inverse of the space discretization*/
+	double area_scale = 1.0/(_fdParamElastic->_dx * _fdParamElastic->_dy * _fdParamElastic->_dz);
+	_sourceRegDtw_vx->scale(area_scale);
+	_sourceRegDtw_vy->scale(area_scale);
+  _sourceRegDtw_vz->scale(area_scale);
+  _sourceRegDtw_sigmaxx->scale(area_scale);
+	_sourceRegDtw_sigmayy->scale(area_scale);
+  _sourceRegDtw_sigmazz->scale(area_scale);
+  _sourceRegDtw_sigmaxz->scale(area_scale);
+	_sourceRegDtw_sigmaxy->scale(area_scale);
+	_sourceRegDtw_sigmayz->scale(area_scale);
 
 
 
@@ -191,7 +276,7 @@ void seismicElasticOperator3D <V1, V2>::setAcquisition_3D(std::shared_ptr<spaceI
 	}
 }
 
-// Set acquisiton for Nonlinear modeling
+// Set acquisiton for Born modeling
 template <class V1, class V2>
 void seismicElasticOperator3D <V1, V2>::setAcquisition_3D(std::shared_ptr<spaceInterpGpu_3D> sourcesCenterGrid, std::shared_ptr<spaceInterpGpu_3D> sourcesXGrid, std::shared_ptr<spaceInterpGpu_3D> sourcesYGrid, std::shared_ptr<spaceInterpGpu_3D> sourcesZGrid, std::shared_ptr<spaceInterpGpu_3D> sourcesXZGrid, std::shared_ptr<spaceInterpGpu_3D> sourcesXYGrid, std::shared_ptr<spaceInterpGpu_3D> sourcesYZGrid, std::shared_ptr<V2> sourcesSignals, std::shared_ptr<spaceInterpGpu_3D> receiversCenterGrid, std::shared_ptr<spaceInterpGpu_3D> receiversXGrid, std::shared_ptr<spaceInterpGpu_3D> receiversYGrid, std::shared_ptr<spaceInterpGpu_3D> receiversZGrid, std::shared_ptr<spaceInterpGpu_3D> receiversXZGrid, std::shared_ptr<spaceInterpGpu_3D> receiversXYGrid, std::shared_ptr<spaceInterpGpu_3D> receiversYZGrid, const std::shared_ptr<V1> model, const std::shared_ptr<V2> data){
 	setSources_3D(sourcesCenterGrid, sourcesXGrid, sourcesYGrid, sourcesZGrid, sourcesXZGrid, sourcesXYGrid, sourcesYZGrid, sourcesSignals);

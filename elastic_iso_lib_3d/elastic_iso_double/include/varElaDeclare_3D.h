@@ -60,6 +60,9 @@
 	// Precomputed scaled properties
 	double **dev_rhoxDtw, **dev_rhoyDtw, **dev_rhozDtw, **dev_lamb2MuDtw, **dev_lambDtw, **dev_muxzDtw, **dev_muxyDtw, **dev_muyzDtw;
 
+	// Wavefield components allocated on pinned memory
+	double **host_pinned_wavefield_vx, **host_pinned_wavefield_vy, **host_pinned_wavefield_vz;
+
 	/************************************* HOST DECLARATION *********************************/
 	double host_dx;
 	double host_dy;
