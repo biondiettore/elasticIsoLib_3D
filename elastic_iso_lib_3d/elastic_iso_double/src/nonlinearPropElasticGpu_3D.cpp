@@ -10,7 +10,6 @@ nonlinearPropElasticGpu_3D::nonlinearPropElasticGpu_3D(std::shared_ptr<fdParamEl
 	_nGpu = nGpu;
 	_iGpuId = iGpuId;
 	_saveWavefield = par->getInt("saveWavefield", 0);
-	_useStreams = par->getInt("useStreams", 0); //Flag whether to use streams to save the wavefield
 	_domDec = par->getInt("domDec", 0); //Flag to use domain decomposition or not
 	_freeSurface = par->getInt("freeSurface", 0); //Flag to use free surface boundary condition or not
 
@@ -30,7 +29,6 @@ nonlinearPropElasticGpu_3D::nonlinearPropElasticGpu_3D(std::shared_ptr<fdParamEl
 	_gpuList = gpuList;
 	_ny_domDec = ny_domDec;
 	_saveWavefield = par->getInt("saveWavefield", 0);
-	_useStreams = par->getInt("useStreams", 0); //Flag whether to use streams to save the wavefield
 	_domDec = par->getInt("domDec", 0); //Flag to use domain decomposition or not
 	_freeSurface = par->getInt("freeSurface", 0); //Flag to use free surface boundary condition or not
 

@@ -11,7 +11,6 @@
 #include <omp.h>
 #include <ctime>
 #include <stdio.h>
-#include <assert.h>
 
 /****************************************************************************************/
 /******************************* Set GPU propagation parameters *************************/

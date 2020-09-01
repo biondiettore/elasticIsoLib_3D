@@ -33,6 +33,7 @@ set(SOURCE_BORN ${SRC_DIR}/BornElasticShotsGpu_3D.cpp
 								${SRC_DIR}/BornElasticGpu_3D.cpp
 								${SRC_DIR}/stagger_3D.cpp
 								${SRC_DIR}/fdParamElastic_3D.cpp
+								${SRC_DIR}/BornElasticGpuFunctions_3D.cu
 )
 
 #SEP LIBRARY DIRECTORIES
@@ -49,8 +50,10 @@ link_directories(${Generic-cpp_BINARY_DIR}
 set(LIBS genericCpp sepVector sep3d sep)
 
 #Compiling the project library
-add_library(ELASTIC_ISO_DOUBLE_NL_3D ${SOURCE_NL} ${SOURCE_BORN})
+add_library(ELASTIC_ISO_DOUBLE_NL_3D ${SOURCE_NL})
 target_link_libraries(ELASTIC_ISO_DOUBLE_NL_3D ${LIBS} OpenMP::OpenMP_CXX)
+add_library(ELASTIC_ISO_DOUBLE_BORN_3D ${SOURCE_BORN})
+target_link_libraries(ELASTIC_ISO_DOUBLE_BORN_3D ${LIBS} OpenMP::OpenMP_CXX)
 
 # Compiling the project executables
 # Model padding program for GPU

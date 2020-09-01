@@ -28,7 +28,7 @@ class seismicElasticOperator3D : public Operator <V1, V2> {
 		long long _nReceiversRegCenterGrid,_nReceiversRegXGrid,_nReceiversRegYGrid,_nReceiversRegZGrid,_nReceiversRegXZGrid,_nReceiversRegXYGrid,_nReceiversRegYZGrid;
 		long long _nReceiversIrregCenterGrid,_nReceiversIrregXGrid,_nReceiversIrregYGrid,_nReceiversIrregZGrid,_nReceiversIrregXZGrid,_nReceiversIrregXYGrid,_nReceiversIrregYZGrid;
 		int _nts;
-		int _saveWavefield,_useStreams;
+		int _saveWavefield;
 		int _iGpu, _nGpu, _iGpuId;
 		int _domDec, _freeSurface;
 		std::vector<int> _gpuList, _ny_domDec;

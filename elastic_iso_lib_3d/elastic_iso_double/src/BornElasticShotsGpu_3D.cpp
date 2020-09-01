@@ -1,7 +1,7 @@
 #include <vector>
 #include <omp.h>
 #include "BornElasticShotsGpu_3D.h"
-// #include "BornElasticGpu_3D.h"
+#include "BornElasticGpu_3D.h"
 #include <stagger_3D.h>
 #include <ctime>
 
@@ -146,7 +146,7 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
     std::shared_ptr<SEP::hypercube> hyperDataSlices(new hypercube(data->getHyper()->getAxis(1), data->getHyper()->getAxis(2), data->getHyper()->getAxis(3)));
     std::vector<std::shared_ptr<double4DReg>> modelSlicesVector;
     std::vector<std::shared_ptr<double3DReg>> dataSlicesVector;
-    // std::vector<std::shared_ptr<BornElasticGpu_3D>> BornObjectVector;
+    std::vector<std::shared_ptr<BornElasticGpu_3D>> BornObjectVector;
 
 		//Staggering and scaling input model perturbations
     std::shared_ptr<double3DReg> temp_stag(new double3DReg(_elasticParam->getHyper()->getAxis(1), _elasticParam->getHyper()->getAxis(2), _elasticParam->getHyper()->getAxis(3)));
@@ -224,12 +224,12 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
   	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
   		// Born object
-  		std::shared_ptr<BornElasticGpu_3D> BornGpuObject(new BornElasticGpu_3D(_fdParamElastic, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
-  		BornObjectVector.push_back(BornGpuObject);
+  		// std::shared_ptr<BornElasticGpu_3D> BornGpuObject_3D(new BornElasticGpu_3D(_fdParamElastic, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
+  		// BornObjectVector.push_back(BornGpuObject);
 
   		// Display finite-difference parameters info
   		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
-  			BornGpuObject->getFdParam()->getInfo();
+  			// BornGpuObject->getFdParam()->getInfo();
   		}
 
   		// Model slice
@@ -250,20 +250,20 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
 
       // Set acquisition geometry
   	  if ( (constantRecGeom == 1) && (constantSrcSignal == 1) || (constantRecGeom == 1) && (constantSrcSignal == 0) ) {
-            BornObjectVector[iGpu]->setAcquisition(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+            // BornObjectVector[iGpu]->setAcquisition(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
   	  }
   	  if ( (constantRecGeom == 0) && (constantSrcSignal == 1) ) {
-            BornObjectVector[iGpu]->setAcquisition(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+            // BornObjectVector[iGpu]->setAcquisition(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
   	  }
   	  if ( (constantRecGeom == 0) && (constantSrcSignal == 0) ) {
-            BornObjectVector[iGpu]->setAcquisition(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iGpu], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+            // BornObjectVector[iGpu]->setAcquisition(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iGpu], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
   	  }
 
       // Set GPU number for propagator object
-      BornObjectVector[iGpu]->setGpuNumber(iGpu,iGpuId);
+      // BornObjectVector[iGpu]->setGpuNumber(iGpu,iGpuId);
 
       //Launch modeling
-      BornObjectVector[iGpu]->forward(false, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+      // BornObjectVector[iGpu]->forward(false, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
 
       // Store dataSlice into data
       #pragma omp parallel for collapse(3)
@@ -279,7 +279,7 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
 
 		// Deallocate memory on device
     for (int iGpu=0; iGpu<_nGpu; iGpu++){
-      deallocateBornElasticGpu_3D(iGpu,_gpuList[iGpu],_useStreams);
+      // deallocateBornElasticGpu_3D(iGpu,_gpuList[iGpu]);
     }
 
 	} else {
