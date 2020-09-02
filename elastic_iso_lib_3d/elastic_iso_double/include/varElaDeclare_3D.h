@@ -56,12 +56,23 @@
 
 	double **dev_modelRegDts_vx, **dev_modelRegDts_vy, **dev_modelRegDts_vz, **dev_modelRegDts_sigmaxx, **dev_modelRegDts_sigmayy, **dev_modelRegDts_sigmazz, **dev_modelRegDts_sigmaxz, **dev_modelRegDts_sigmaxy, **dev_modelRegDts_sigmayz; // Model for nonlinear propagation (wavelet)
 	double **dev_dataRegDts_vx, **dev_dataRegDts_vy, **dev_dataRegDts_vz, **dev_dataRegDts_sigmaxx, **dev_dataRegDts_sigmayy, **dev_dataRegDts_sigmazz, **dev_dataRegDts_sigmaxz, **dev_dataRegDts_sigmaxy, **dev_dataRegDts_sigmayz; // Data on device at coarse time-sampling (converted to regular grid)
+	double **dev_sourceRegDts_vx, **dev_sourceRegDts_vy, **dev_sourceRegDts_vz, **dev_sourceRegDts_sigmaxx, **dev_sourceRegDts_sigmayy, **dev_sourceRegDts_sigmazz, **dev_sourceRegDts_sigmaxz, **dev_sourceRegDts_sigmaxy, **dev_sourceRegDts_sigmayz; // Source for Born operator (wavelet)
 
 	// Precomputed scaled properties
 	double **dev_rhoxDtw, **dev_rhoyDtw, **dev_rhozDtw, **dev_lamb2MuDtw, **dev_lambDtw, **dev_muxzDtw, **dev_muxyDtw, **dev_muyzDtw;
 
+	// Perturbations on the device
+	double **dev_drhox, **dev_drhoy, **dev_drhoz, **dev_dlame, **dev_dmu, **dev_dmuxz, **dev_dmuxy, **dev_dmuyz;
+
 	// Wavefield components allocated on pinned memory
 	double **host_pinned_wavefield_vx, **host_pinned_wavefield_vy, **host_pinned_wavefield_vz;
+
+	// Wavefield slices for Born operator
+	double **dev_ssVxLeft, **dev_ssVxRight, **dev_ssVyLeft, **dev_ssVyRight, **dev_ssVzLeft, **dev_ssVzRight, **dev_ssSigmaxxLeft, **dev_ssSigmaxxRight, **dev_ssSigmayyLeft, **dev_ssSigmayyRight, **dev_ssSigmazzLeft, **dev_ssSigmazzRight, **dev_ssSigmaxzLeft, **dev_ssSigmaxzRight, **dev_ssSigmaxyLeft, **dev_ssSigmaxyRight, **dev_ssSigmayzLeft, **dev_ssSigmayzRight;
+
+	// Source wavefield slices
+	double **dev_wavefieldVx_left, **dev_wavefieldVx_cur, **dev_wavefieldVx_right, **dev_wavefieldVy_left, **dev_wavefieldVy_cur, **dev_wavefieldVy_right, **dev_wavefieldVz_left, **dev_wavefieldVz_cur, **dev_wavefieldVz_right;
+	double **dev_pStream_Vx, **dev_pStream_Vy, **dev_pStream_Vz;
 
 	/************************************* HOST DECLARATION *********************************/
 	double host_dx;

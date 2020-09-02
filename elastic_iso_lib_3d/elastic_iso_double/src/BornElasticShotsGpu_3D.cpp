@@ -18,9 +18,9 @@ BornElasticShotsGpu_3D::BornElasticShotsGpu_3D(std::shared_ptr<SEP::double4DReg>
 		createGpuIdList_3D();
   	_info = par->getInt("info", 0);
   	_deviceNumberInfo = par->getInt("deviceNumberInfo", 0);
-  	// if( not getGpuInfo_3D(_gpuList, _info, _deviceNumberInfo)){
-		// 	throw std::runtime_error("Error in getGpuInfo_3D");
-		// }; // Get info on GPU cluster and check that there are enough available GPUs
+  	if( not getGpuInfo_3D(_gpuList, _info, _deviceNumberInfo)){
+			throw std::runtime_error("Error in getGpuInfo_3D");
+		}; // Get info on GPU cluster and check that there are enough available GPUs
   	_saveWavefield = _par->getInt("saveWavefield", 0);
   	_wavefieldShotNumber = _par->getInt("wavefieldShotNumber", 0);
   	if (_info == 1 && _saveWavefield == 1){
@@ -76,11 +76,27 @@ BornElasticShotsGpu_3D::BornElasticShotsGpu_3D(std::shared_ptr<SEP::double4DReg>
 				std::cout << std::endl;
 			}
 			//Enable P2P memcpy
-			// setGpuP2P(_nGpu, par->getInt("info", 0), _gpuList);
+			setGpuP2P(_nGpu, par->getInt("info", 0), _gpuList);
 
 		}
 
+		// Allocating pinned memory for wavefields
+		for (int iGpu = 0; iGpu < _nGpu; iGpu++){
+			if (_domDec == 1){
+				allocatePinBornElasticGpu_3D(_fdParamElastic->_nx, _ny_domDec[iGpu], _fdParamElastic->_nz, _fdParamElastic->_nts, _nGpu, _gpuList[iGpu], iGpu, _iGpuAlloc);
+			} else {
+				allocatePinBornElasticGpu_3D(_fdParamElastic->_nx, _fdParamElastic->_ny, _fdParamElastic->_nz, _fdParamElastic->_nts, _nGpu, _gpuList[iGpu], iGpu, _iGpuAlloc);
+			}
+		}
+
 }
+
+/* Destructor whose purpose is to deallocate the pinned memory */
+BornElasticShotsGpu_3D::~BornElasticShotsGpu_3D(){
+	for (int iGpu = 0; iGpu < _nGpu; iGpu++){
+		deallocatePinBornElasticGpu_3D(iGpu, _gpuList[iGpu]);
+	}
+};
 
 
 void BornElasticShotsGpu_3D::createGpuIdList_3D(){
@@ -224,12 +240,12 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
   	for (int iGpu=0; iGpu<_nGpu; iGpu++){
 
   		// Born object
-  		// std::shared_ptr<BornElasticGpu_3D> BornGpuObject_3D(new BornElasticGpu_3D(_fdParamElastic, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
-  		// BornObjectVector.push_back(BornGpuObject);
+  		std::shared_ptr<BornElasticGpu_3D> BornGpuObject(new BornElasticGpu_3D(_fdParamElastic, _par, _nGpu, iGpu, _gpuList[iGpu], _iGpuAlloc));
+  		BornObjectVector.push_back(BornGpuObject);
 
   		// Display finite-difference parameters info
   		if ( (_info == 1) && (_gpuList[iGpu] == _deviceNumberInfo) ){
-  			// BornGpuObject->getFdParam()->getInfo();
+  			BornGpuObject->getFdParam_3D()->getInfo_3D();
   		}
 
   		// Model slice
@@ -250,20 +266,20 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
 
       // Set acquisition geometry
   	  if ( (constantRecGeom == 1) && (constantSrcSignal == 1) || (constantRecGeom == 1) && (constantSrcSignal == 0) ) {
-            // BornObjectVector[iGpu]->setAcquisition(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+            BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
   	  }
   	  if ( (constantRecGeom == 0) && (constantSrcSignal == 1) ) {
-            // BornObjectVector[iGpu]->setAcquisition(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+            BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
   	  }
   	  if ( (constantRecGeom == 0) && (constantSrcSignal == 0) ) {
-            // BornObjectVector[iGpu]->setAcquisition(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iGpu], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+            BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iGpu], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
   	  }
 
       // Set GPU number for propagator object
-      // BornObjectVector[iGpu]->setGpuNumber(iGpu,iGpuId);
+      BornObjectVector[iGpu]->setGpuNumber_3D(iGpu,iGpuId);
 
       //Launch modeling
-      // BornObjectVector[iGpu]->forward(false, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+      BornObjectVector[iGpu]->forward(false, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
 
       // Store dataSlice into data
       #pragma omp parallel for collapse(3)
@@ -279,7 +295,7 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
 
 		// Deallocate memory on device
     for (int iGpu=0; iGpu<_nGpu; iGpu++){
-      // deallocateBornElasticGpu_3D(iGpu,_gpuList[iGpu]);
+      deallocateBornElasticGpu_3D(iGpu,_gpuList[iGpu]);
     }
 
 	} else {

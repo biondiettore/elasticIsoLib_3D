@@ -113,7 +113,7 @@ void nonlinearPropElasticGpu_3D::forward(const bool add, const std::shared_ptr<d
 		// Vx
 		long long shift;
 		long long chunk = _nReceiversIrregXGrid*_fdParamElastic->_nts;
-	  std::memcpy(dataIrreg_vx->getVals(),data->getVals(), chunk*sizeof(double));
+	  std::memcpy(dataIrreg_vx->getVals(), data->getVals(), chunk*sizeof(double));
 		// Vy
 		shift = chunk;
 		chunk = _nReceiversIrregYGrid*_fdParamElastic->_nts;

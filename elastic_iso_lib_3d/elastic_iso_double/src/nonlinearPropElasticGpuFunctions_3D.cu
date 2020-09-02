@@ -355,6 +355,7 @@ void deallocateNonlinearElasticGpu_3D(int iGpu, int iGpuId){
 		cuda_call(cudaFree(dev_p0_sigmaxx[iGpu]));
 		cuda_call(cudaFree(dev_p0_sigmayy[iGpu]));
 		cuda_call(cudaFree(dev_p0_sigmazz[iGpu]));
+		cuda_call(cudaFree(dev_p0_sigmaxz[iGpu]));
 		cuda_call(cudaFree(dev_p0_sigmaxy[iGpu]));
 		cuda_call(cudaFree(dev_p0_sigmayz[iGpu]));
 
@@ -364,6 +365,7 @@ void deallocateNonlinearElasticGpu_3D(int iGpu, int iGpuId){
 		cuda_call(cudaFree(dev_p1_sigmaxx[iGpu]));
 		cuda_call(cudaFree(dev_p1_sigmayy[iGpu]));
 		cuda_call(cudaFree(dev_p1_sigmazz[iGpu]));
+		cuda_call(cudaFree(dev_p1_sigmaxz[iGpu]));
 		cuda_call(cudaFree(dev_p1_sigmaxy[iGpu]));
 		cuda_call(cudaFree(dev_p1_sigmayz[iGpu]));
 }
@@ -624,7 +626,7 @@ void setupAdjGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double *mode
 
 		//initialize wavefield slices to zero
 		long long nModel = nz;
-		nModel *= nx *ny;
+		nModel *= nx * ny;
 		wavefieldInitializeOnGpu_3D(nModel, iGpu);
 }
 
@@ -905,9 +907,8 @@ void propElasticFwdGpu_3D(double *modelRegDts_vx, double *modelRegDts_vy, double
 
 		// Start propagation
 		for (int its = 0; its < host_nts-1; its++){
-				// std::cout << "its = " << its << std::endl;
 				for (int it2 = 1; it2 < host_sub+1; it2++){
-						// Compute fine time-step index
+							// Compute fine time-step index
 
 							// Step forward
 							launchFwdStepKernels_3D(dimGrid, dimBlock, nx, ny, nz, iGpu);
