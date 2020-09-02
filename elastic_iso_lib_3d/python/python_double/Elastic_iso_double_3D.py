@@ -1,7 +1,7 @@
 #Python module encapsulating PYBIND11 module
 #It seems necessary to allow std::cout redirection to screen
 import pyElastic_iso_double_nl_3D
-# import pyElastic_iso_double_born
+import pyElastic_iso_double_born_3D
 import pyOperator as Op
 import elasticParamConvertModule_3D as ElaConv_3D
 #Other necessary modules
@@ -393,13 +393,13 @@ class nonlinearPropElasticShotsGpu_3D(Op.Operator):
 	# 	wavefield = self.pyOp.getWavefield()
 	# 	return SepVector.doubleVector(fromCpp=wavefield)
 
-	# def setBackground(self,elasticParam):
-	# 	#Checking if getCpp is present
-	# 	if("getCpp" in dir(elasticParam)):
-	# 		elasticParam = elasticParam.getCpp()
-	# 	with pyElastic_iso_double_nl_3D.ostream_redirect():
-	# 		self.pyOp.setBackground(elasticParam)
-	# 	return
+	def setBackground(self,elasticParam):
+		#Checking if getCpp is present
+		if("getCpp" in dir(elasticParam)):
+			elasticParam = elasticParam.getCpp()
+		with pyElastic_iso_double_nl_3D.ostream_redirect():
+			self.pyOp.setBackground(elasticParam)
+		return
 
 	def dotTestCpp(self,verb=False,maxError=.00001):
 		"""Method to call the Cpp class dot-product test"""
@@ -412,3 +412,118 @@ class nonlinearPropElasticShotsGpu_3D(Op.Operator):
 ################################################################################
 ################################### Born #######################################
 ################################################################################
+def BornOpInitDouble_3D(args):
+	"""
+	   Function to correctly initialize Born operator
+	   The function will return the necessary variables for operator construction
+	"""
+	# IO objects
+	parObject=genericIO.io(params=sys.argv)
+
+	# elatic params
+	elasticParam=parObject.getString("elasticParam", "noElasticParamFile")
+	if (elasticParam == "noElasticParamFile"):
+		print("**** ERROR: User did not provide elastic parameter file ****\n")
+		sys.exit()
+	elasticParamFloat=genericIO.defaultIO.getVector(elasticParam)
+	elasticParamDouble=SepVector.getSepVector(elasticParamFloat.getHyper(),storage="dataDouble")
+	#Converting model parameters to Rho|Lame|Mu if necessary [kg/m3|Pa|Pa]
+	# 0 ==> correct parameterization
+	# 1 ==> VpVsRho to RhoLameMu (m/s|m/s|kg/m3 -> kg/m3|Pa|Pa)
+	mod_par = parObject.getInt("mod_par",0)
+	if(mod_par != 0):
+		convOp = ElaConv_3D.ElasticConv_3D(elasticParamFloat,mod_par)
+		elasticParamFloatTemp = elasticParamFloat.clone()
+		convOp.forward(False,elasticParamFloatTemp,elasticParamFloat)
+		del elasticParamFloatTemp
+
+	#Conversion to double precision
+	elasticParamDoubleNp=elasticParamDouble.getNdArray()
+	elasticParamFloatNp=elasticParamFloat.getNdArray()
+	elasticParamDoubleNp[:]=elasticParamFloatNp
+
+
+	# Time Axis
+	nts=parObject.getInt("nts")
+	ots=parObject.getFloat("ots",0.0)
+	dts=parObject.getFloat("dts")
+	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
+	wavefieldAxis=Hypercube.axis(n=9)
+	sourceGeomFile = parObject.getString("sourceGeomFile")
+
+	# Read sources signals
+	sourceGeomVector = genericIO.defaultIO.getVector(sourceGeomFile,ndims=3)
+	sourceSimAxis = sourceGeomVector.getHyper().getAxis(2)
+	sourceHyper=Hypercube.hypercube(axes=[timeAxis,sourceSimAxis,wavefieldAxis])
+
+	sourcesFile=parObject.getString("sources","noSourcesFile")
+	if (sourcesFile == "noSourcesFile"):
+		raise IOError("**** ERROR: User did not provide seismic sources file ****")
+	sourcesSignalsFloat=genericIO.defaultIO.getVector(sourcesFile,ndims=3)
+	sourcesSignalsDouble=SepVector.getSepVector(sourceHyper,storage="dataDouble")
+	sourcesSignalsDoubleNp=sourcesSignalsDouble.getNdArray()
+	sourcesSignalsFloatNp=sourcesSignalsFloat.getNdArray()
+	sourcesSignalsDoubleNp[:]=sourcesSignalsFloatNp
+	sourcesSignalsVector=[]
+	sourcesSignalsVector.append(sourcesSignalsDouble) # Create a vector of double3DReg slices
+
+	# Build sources/receivers geometry
+	sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,sourceAxis=buildSourceGeometry_3D(parObject,elasticParamFloat)
+	recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid,receiverAxis=buildReceiversGeometry_3D(parObject,elasticParamFloat)
+
+	# Allocate model
+	modelDouble=SepVector.getSepVector(elasticParamDouble.getHyper(),storage="dataDouble")
+
+	# Allocate data
+	dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis,wavefieldAxis,sourceAxis])
+	dataDouble=SepVector.getSepVector(dataHyper,storage="dataDouble")
+
+	# Outputs
+	return
+	modelDouble,dataDouble,elasticParamDouble,parObject,sourcesSignalsVector,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid
+
+class BornElasticShotsGpu_3D(Op.Operator):
+	"""Wrapper encapsulating PYBIND11 module for elastic Born propagator"""
+
+	def __init__(self,domain,range,elasticParam,parObject,sourcesSignalsVector,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid):
+		#Domain = source wavelet
+		#Range = recorded data space
+		self.setDomainRange(domain,range)
+		#Checking if getCpp is present
+		if("getCpp" in dir(elasticParam)):
+			elasticParam = elasticParam.getCpp()
+		if("getCpp" in dir(paramP)):
+			paramP = paramP.getCpp()
+		for idx,sourceSignal in enumerate(sourcesSignalsVector):
+			if("getCpp" in dir(sourceSignal)):
+				sourcesSignalsVector[idx] = sourceSignal.getCpp()
+		self.pyOp = pyElastic_iso_double_born_3D.BornElasticShotsGpu_3D(elasticParam,parObject,sourcesSignalsVector,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid)
+		return
+
+	def forward(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyElastic_iso_double_nl_3D.ostream_redirect():
+			self.pyOp.forward(add,model,data)
+		return
+
+	def adjoint(self,add,model,data):
+		#Checking if getCpp is present
+		if("getCpp" in dir(model)):
+			model = model.getCpp()
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyElastic_iso_double_nl_3D.ostream_redirect():
+			self.pyOp.adjoint(add,model,data)
+		return
+
+	def setBackground(self,elasticParam):
+		#Checking if getCpp is present
+		if("getCpp" in dir(elasticParam)):
+			elasticParam = elasticParam.getCpp()
+		with pyElastic_iso_double_nl_3D.ostream_redirect():
+			self.pyOp.setBackground(elasticParam)
+		return

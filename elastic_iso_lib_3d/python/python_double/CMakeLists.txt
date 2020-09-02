@@ -33,11 +33,15 @@ set(LIBS genericCpp buffers jsonCpp hypercube  ${OpenMP_EXE_LINKER_FLAGS} ${TBB_
 # Compiling and adding module to library
 pybind11_add_module(pyElastic_iso_double_nl_3D MODULE pyElastic_iso_double_nl_3D.cpp)
 target_link_libraries(pyElastic_iso_double_nl_3D PRIVATE ELASTIC_ISO_DOUBLE_NL_3D ${LIBS})
+pybind11_add_module(pyElastic_iso_double_born_3D MODULE pyElastic_iso_double_born_3D.cpp)
+target_link_libraries(pyElastic_iso_double_born_3D PRIVATE ELASTIC_ISO_DOUBLE_BORN_3D ${LIBS})
 
 # Installing library
 set(PYTHON_DIR "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
 install( TARGETS pyElastic_iso_double_nl_3D DESTINATION ${PYTHON_DIR}) # Module for nonlinear operator
+install( TARGETS pyElastic_iso_double_born_3D DESTINATION ${PYTHON_DIR}) # Module for nonlinear operator
 install( FILES Elastic_iso_double_3D.py DESTINATION ${PYTHON_DIR})
 
 # Installing Python executables
 install( FILES nonlinearPythonDoubleMain_3D.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+install( FILES BornPythonDoubleMain_3D.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)

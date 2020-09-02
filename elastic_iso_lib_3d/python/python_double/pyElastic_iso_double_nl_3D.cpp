@@ -5,7 +5,6 @@
 #include <pybind11/stl.h>
 #include <pybind11/iostream.h>
 #include "nonlinearPropElasticShotsGpu_3D.h"
-// #include "spaceInterpGpu_3D.h"
 
 namespace py = pybind11;
 using namespace SEP;
