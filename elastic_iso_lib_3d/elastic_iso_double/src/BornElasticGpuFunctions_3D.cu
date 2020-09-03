@@ -111,7 +111,7 @@ void setGpuP2P(int nGpu, int info, std::vector<int> gpuList){
 
 
 // Setting common parameters
-void BornElasticGpu_3D(double dz, double dx, double dy, int nz, int nx, int ny, int nts, double dts, int sub, int minPad, int blockSize, double alphaCos, int nGpu, int iGpuId, int iGpuAlloc){
+void initBornElasticGpu_3D(double dz, double dx, double dy, int nz, int nx, int ny, int nts, double dts, int sub, int minPad, int blockSize, double alphaCos, int nGpu, int iGpuId, int iGpuAlloc){
 
 		// Set GPU
 		cudaSetDevice(iGpuId);

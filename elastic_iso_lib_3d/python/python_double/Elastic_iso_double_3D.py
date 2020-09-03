@@ -259,17 +259,16 @@ def buildReceiversGeometry_3D(parObject,elasticParam):
 		xCoordNd[:]=receiverGeomVectorNd[0,:,iExp]
 		yCoordNd[:]=receiverGeomVectorNd[1,:,iExp]
 
-		for iRec in range(nReceiverPerShot):
-			# Central grid
-			recVectorCenterGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),centerGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
-			# Staggered grids for velocities
-			recVectorXGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
-			recVectorYGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),yGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
-			recVectorZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),zGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
-			# Staggered grids for stresses
-			recVectorXZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xzGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
-			recVectorXYGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xyGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
-			recVectorYZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),yzGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+		# Central grid
+		recVectorCenterGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),centerGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+		# Staggered grids for velocities
+		recVectorXGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+		recVectorYGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),yGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+		recVectorZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),zGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+		# Staggered grids for stresses
+		recVectorXZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xzGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+		recVectorXYGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),xyGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
+		recVectorYZGrid.append(spaceInterpGpu_3D(zCoord.getCpp(),xCoord.getCpp(),yCoord.getCpp(),yzGridHyper.getCpp(),nts,parObject.param,dipole,zDipoleShift,xDipoleShift,yDipoleShift,spaceInterpMethod,hFilter1d))
 
 
 	return recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid,receiverAxis
@@ -459,11 +458,11 @@ def BornOpInitDouble_3D(args):
 	sourcesFile=parObject.getString("sources","noSourcesFile")
 	if (sourcesFile == "noSourcesFile"):
 		raise IOError("**** ERROR: User did not provide seismic sources file ****")
-	sourcesSignalsFloat=genericIO.defaultIO.getVector(sourcesFile,ndims=3)
+	sourcesSignalsFloat=genericIO.defaultIO.getVector(sourcesFile,ndims=4)
 	sourcesSignalsDouble=SepVector.getSepVector(sourceHyper,storage="dataDouble")
 	sourcesSignalsDoubleNp=sourcesSignalsDouble.getNdArray()
 	sourcesSignalsFloatNp=sourcesSignalsFloat.getNdArray()
-	sourcesSignalsDoubleNp[:]=sourcesSignalsFloatNp
+	sourcesSignalsDoubleNp.flat[:]=sourcesSignalsFloatNp
 	sourcesSignalsVector=[]
 	sourcesSignalsVector.append(sourcesSignalsDouble) # Create a vector of double3DReg slices
 
