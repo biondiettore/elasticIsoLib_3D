@@ -176,6 +176,7 @@ void BornElasticGpu_3D::forward(const bool add, const std::shared_ptr<double4DRe
 	chunk = _nReceiversIrregYZGrid*_fdParamElastic->_nts;
 	std::memcpy(data->getVals()+shift, dataIrreg_sigmayz->getVals(), chunk*sizeof(double) );
 
+
 }
 
 

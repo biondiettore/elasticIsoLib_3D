@@ -333,6 +333,8 @@ void initBornElasticGpu_3D(double dz, double dx, double dy, int nz, int nx, int 
 		cuda_call(cudaMemcpyToSymbol(dev_nts, &nts, sizeof(int), 0, cudaMemcpyHostToDevice)); // Copy number of coarse time parameters to device
 		cuda_call(cudaMemcpyToSymbol(dev_sub, &sub, sizeof(int), 0, cudaMemcpyHostToDevice));
 		cuda_call(cudaMemcpyToSymbol(dev_ntw, &host_ntw, sizeof(int), 0, cudaMemcpyHostToDevice)); // Copy number of coarse time parameters to device
+		double inv_dts = 1.0/(2.0 * dts);
+  	cuda_call(cudaMemcpyToSymbol(dev_dts_inv, &inv_dts, sizeof(double), 0, cudaMemcpyHostToDevice)); // Inverse of the time-source sampling
 
 }
 
@@ -416,6 +418,16 @@ void allocateBornElasticGpu_3D(double *rhoxDtw, double *rhoyDtw, double *rhozDtw
 		cuda_call(cudaMalloc((void**) &dev_p1_sigmaxz[iGpu], nModel*sizeof(double)));
 		cuda_call(cudaMalloc((void**) &dev_p1_sigmaxy[iGpu], nModel*sizeof(double)));
 		cuda_call(cudaMalloc((void**) &dev_p1_sigmayz[iGpu], nModel*sizeof(double)));
+
+		// Model perturbations
+		cuda_call(cudaMalloc((void**) &dev_drhox[iGpu], nModel*sizeof(double)));
+		cuda_call(cudaMalloc((void**) &dev_drhoy[iGpu], nModel*sizeof(double)));
+		cuda_call(cudaMalloc((void**) &dev_drhoz[iGpu], nModel*sizeof(double)));
+		cuda_call(cudaMalloc((void**) &dev_dlame[iGpu], nModel*sizeof(double)));
+		cuda_call(cudaMalloc((void**) &dev_dmu[iGpu], nModel*sizeof(double)));
+		cuda_call(cudaMalloc((void**) &dev_dmuxz[iGpu], nModel*sizeof(double)));
+		cuda_call(cudaMalloc((void**) &dev_dmuxy[iGpu], nModel*sizeof(double)));
+		cuda_call(cudaMalloc((void**) &dev_dmuyz[iGpu], nModel*sizeof(double)));
 
 		// Wavefield slices
 		cuda_call(cudaMalloc((void**) &dev_ssVxLeft[iGpu], nModel*sizeof(double)));
@@ -721,9 +733,9 @@ void wavefieldInitializeOnGpu_3D(long long nModel, int iGpu){
 }
 
 void pinnedWavefieldInitializeGpu_3D(long long nModel, int iGpu){
-	cudaMemset(host_pinned_wavefield_vx[iGpu], 0, nModel*host_nts*sizeof(double)); // Initialize pinned memory
-	cudaMemset(host_pinned_wavefield_vy[iGpu], 0, nModel*host_nts*sizeof(double)); // Initialize pinned memory
-	cudaMemset(host_pinned_wavefield_vz[iGpu], 0, nModel*host_nts*sizeof(double)); // Initialize pinned memory
+	cuda_call(cudaMemset(host_pinned_wavefield_vx[iGpu], 0, nModel*host_nts*sizeof(double))); // Initialize pinned memory
+	cuda_call(cudaMemset(host_pinned_wavefield_vy[iGpu], 0, nModel*host_nts*sizeof(double))); // Initialize pinned memory
+	cuda_call(cudaMemset(host_pinned_wavefield_vz[iGpu], 0, nModel*host_nts*sizeof(double))); // Initialize pinned memory
 }
 
 void modelCopyToGpu_3D(double *drhox, double *drhoy, double *drhoz, double *dlame, double *dmu, double *dmuxz, double *dmuxy, double *dmuyz, long long nModel, int iGpu){
@@ -1080,6 +1092,7 @@ void BornElasticFwdGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 				switchPointers_3D(iGpu);
 
 			}
+
 			/* Note: At that point pLeft [its] is ready to be transfered back to host */
 
 			// Synchronize [transfer] (make sure the temporary device array dev_pStream has been transfered to host)
@@ -1095,9 +1108,9 @@ void BornElasticFwdGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 
 			// Asynchronous transfer of pStream => pin [its] [transfer]
 			// Launch the transfer while we compute the next coarse time sample
-			cuda_call(cudaMemcpyAsync(host_pinned_wavefield_vx[iGpu]+(its-1)*nModel, dev_pStream_Vx[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost, transferStream));
-			cuda_call(cudaMemcpyAsync(host_pinned_wavefield_vy[iGpu]+(its-1)*nModel, dev_pStream_Vy[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost, transferStream));
-			cuda_call(cudaMemcpyAsync(host_pinned_wavefield_vz[iGpu]+(its-1)*nModel, dev_pStream_Vz[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost, transferStream));
+			cuda_call(cudaMemcpyAsync(host_pinned_wavefield_vx[iGpu]+its*nModel, dev_pStream_Vx[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost, transferStream));
+			cuda_call(cudaMemcpyAsync(host_pinned_wavefield_vy[iGpu]+its*nModel, dev_pStream_Vy[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost, transferStream));
+			cuda_call(cudaMemcpyAsync(host_pinned_wavefield_vz[iGpu]+its*nModel, dev_pStream_Vz[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost, transferStream));
 
 			// Switch pointers
 			switchPointers_wavefield2Slices_3D(iGpu);
@@ -1113,7 +1126,6 @@ void BornElasticFwdGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 	cuda_call(cudaMemcpyAsync(host_pinned_wavefield_vy[iGpu]+(host_nts-1)*nModel, dev_wavefieldVy_left[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost, transferStream));
 	cuda_call(cudaMemcpyAsync(host_pinned_wavefield_vz[iGpu]+(host_nts-1)*nModel, dev_wavefieldVz_left[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost, transferStream));
 	cuda_call(cudaStreamSynchronize(transferStream));
-
 
 	/************************** Scattered wavefield computation ****************************/
 
@@ -1142,6 +1154,10 @@ void BornElasticFwdGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 	cuda_call(cudaMemcpyAsync(dev_pStream_Vy[iGpu], host_pinned_wavefield_vy[iGpu]+2*nModel, nModel*sizeof(double), cudaMemcpyHostToDevice, transferStream));
 	cuda_call(cudaMemcpyAsync(dev_pStream_Vz[iGpu], host_pinned_wavefield_vz[iGpu]+2*nModel, nModel*sizeof(double), cudaMemcpyHostToDevice, transferStream));
 	cuda_call(cudaStreamSynchronize(transferStream));
+
+	std::cout << "before scattered wavefield" << std::endl;
+
+	double *tmpSlice = new double[nModel];
 
 	// Start propagating scattered wavefield
 	for (int its = 0; its < host_nts-1; its++){
@@ -1183,6 +1199,10 @@ void BornElasticFwdGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 			switchPointers_3D(iGpu);
 
 		}
+		// std::cout << "its = " << its << std::endl;
+		// cuda_call(cudaMemcpy(tmpSlice, dev_p0_vx[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost));
+		// std::cout << "Min value pLeft = " << *std::min_element(tmpSlice,tmpSlice+nModel) << std::endl;
+		// std::cout << "Max value pLeft = " << *std::max_element(tmpSlice,tmpSlice+nModel) << std::endl;
 
 		// Switch pointers for secondary source and setting right slices to zero
 		switchPointersSecondarySource_3D(iGpu);
@@ -1218,15 +1238,15 @@ void BornElasticFwdGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 	cuda_call(cudaMemcpy(dataRegDts_sigmayz, dev_dataRegDts_sigmayz[iGpu], nReceiversRegYZGrid*host_nts*sizeof(double), cudaMemcpyDeviceToHost));
 
 	// Deallocate all slices
-	cuda_call(cudaFree(dev_modelRegDts_vx[iGpu]));
-	cuda_call(cudaFree(dev_modelRegDts_vy[iGpu]));
-	cuda_call(cudaFree(dev_modelRegDts_vz[iGpu]));
-	cuda_call(cudaFree(dev_modelRegDts_sigmaxx[iGpu]));
-	cuda_call(cudaFree(dev_modelRegDts_sigmayy[iGpu]));
-	cuda_call(cudaFree(dev_modelRegDts_sigmazz[iGpu]));
-	cuda_call(cudaFree(dev_modelRegDts_sigmaxz[iGpu]));
-	cuda_call(cudaFree(dev_modelRegDts_sigmaxy[iGpu]));
-	cuda_call(cudaFree(dev_modelRegDts_sigmayz[iGpu]));
+	cuda_call(cudaFree(dev_sourceRegDts_vx[iGpu]));
+	cuda_call(cudaFree(dev_sourceRegDts_vy[iGpu]));
+	cuda_call(cudaFree(dev_sourceRegDts_vz[iGpu]));
+	cuda_call(cudaFree(dev_sourceRegDts_sigmaxx[iGpu]));
+	cuda_call(cudaFree(dev_sourceRegDts_sigmayy[iGpu]));
+	cuda_call(cudaFree(dev_sourceRegDts_sigmazz[iGpu]));
+	cuda_call(cudaFree(dev_sourceRegDts_sigmaxz[iGpu]));
+	cuda_call(cudaFree(dev_sourceRegDts_sigmaxy[iGpu]));
+	cuda_call(cudaFree(dev_sourceRegDts_sigmayz[iGpu]));
 
 	cuda_call(cudaFree(dev_dataRegDts_vx[iGpu]));
 	cuda_call(cudaFree(dev_dataRegDts_vy[iGpu]));
