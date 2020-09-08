@@ -225,11 +225,14 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
     			(*modelSlice->_mat)[0][iy][ix][iz] *= (*_fdParamElastic->_rhoxDtwReg->_mat)[iy][ix][iz];
 					(*modelSlice->_mat)[1][iy][ix][iz] *= (*_fdParamElastic->_rhoyDtwReg->_mat)[iy][ix][iz];
     			(*modelSlice->_mat)[2][iy][ix][iz] *= (*_fdParamElastic->_rhozDtwReg->_mat)[iy][ix][iz];
-	    		// (*modelSlice->_mat)[3][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw; // No need to do this scaling; done in the kernel
-	    		// (*modelSlice->_mat)[4][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw; // No need to do this scaling; done in the kernel
-	    		(*modelSlice->_mat)[5][iy][ix][iz] *= (*_fdParamElastic->_muxzDtwReg->_mat)[iy][ix][iz];
-					(*modelSlice->_mat)[6][iy][ix][iz] *= (*_fdParamElastic->_muxyDtwReg->_mat)[iy][ix][iz];
-					(*modelSlice->_mat)[7][iy][ix][iz] *= (*_fdParamElastic->_muyzDtwReg->_mat)[iy][ix][iz];
+	    		(*modelSlice->_mat)[3][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+	    		(*modelSlice->_mat)[4][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+					(*modelSlice->_mat)[5][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+	    		(*modelSlice->_mat)[6][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+					(*modelSlice->_mat)[7][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+	    		// (*modelSlice->_mat)[5][iy][ix][iz] *= (*_fdParamElastic->_muxzDtwReg->_mat)[iy][ix][iz];
+					// (*modelSlice->_mat)[6][iy][ix][iz] *= (*_fdParamElastic->_muxyDtwReg->_mat)[iy][ix][iz];
+					// (*modelSlice->_mat)[7][iy][ix][iz] *= (*_fdParamElastic->_muyzDtwReg->_mat)[iy][ix][iz];
     		}
     	}
 		}

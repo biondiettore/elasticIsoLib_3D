@@ -872,10 +872,7 @@ __global__ void dampCosineEdge_3D(double *dev_p1_vx, double *dev_p2_vx, double *
 /******************************************************************************/
 /**************************** Scattering/Imaging ******************************/
 /******************************************************************************/
-__global__ void imagingElaFwdGpu_3D(double* dev_o_vx, double* dev_c_vx, double* dev_n_vx, double* dev_o_vy, double* dev_c_vy, double* dev_n_vy, double* dev_o_vz, double* dev_c_vz, double* dev_n_vz, double* dev_vx, double* dev_vy, double* dev_vz, double* dev_sigmaxx, double* dev_sigmayy, double* dev_sigmazz, double* dev_sigmaxz, double* dev_sigmaxy, double* dev_sigmayz, double* dev_drhox, double* dev_drhoy, double* dev_drhoz, double* dev_dlame, double* dev_dmu, double* dev_dmuxz, double* dev_dmuxy, double* dev_dmuyz, double* dev_lamb2MuDtw, double* dev_lambDtw, int nx, int ny, int nz, int its){
-
-	// The drho_i and dmu_ij have been already scaled by the  source scaling factor deriving by the propagation operator
-	// dlame, d_mu have not been scaled and they will be by dev_lamb2MuDtw and dev_lambDtw appropriately
+__global__ void imagingElaFwdGpu_3D(double* dev_o_vx, double* dev_c_vx, double* dev_n_vx, double* dev_o_vy, double* dev_c_vy, double* dev_n_vy, double* dev_o_vz, double* dev_c_vz, double* dev_n_vz, double* dev_vx, double* dev_vy, double* dev_vz, double* dev_sigmaxx, double* dev_sigmayy, double* dev_sigmazz, double* dev_sigmaxz, double* dev_sigmaxy, double* dev_sigmayz, double* dev_drhox, double* dev_drhoy, double* dev_drhoz, double* dev_dlame, double* dev_dmu, double* dev_dmuxz, double* dev_dmuxy, double* dev_dmuyz, int nx, int ny, int nz, int its){
 
 	// Allocate shared memory for a specific block
 	__shared__ double shared_c_vx[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vx wavefield y-slice block
@@ -1033,15 +1030,6 @@ __global__ void imagingElaFwdGpu_3D(double* dev_o_vx, double* dev_c_vx, double* 
     dev_sigmayy[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvy_dy;
 		//Scattering Sigmaxx component
     dev_sigmazz[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvz_dz;
-
-		// Component mixing due to source scaling factor
-		double mxx, myy, mzz;
-		mxx = dev_sigmaxx[iGlobal] * dev_lamb2MuDtw[iGlobal] + (dev_sigmayy[iGlobal] + dev_sigmazz[iGlobal]) * dev_lambDtw[iGlobal];
-		myy = dev_sigmayy[iGlobal] * dev_lamb2MuDtw[iGlobal] + (dev_sigmaxx[iGlobal] + dev_sigmazz[iGlobal]) * dev_lambDtw[iGlobal];
-		mzz = dev_sigmazz[iGlobal] * dev_lamb2MuDtw[iGlobal] + (dev_sigmaxx[iGlobal] + dev_sigmayy[iGlobal]) * dev_lambDtw[iGlobal];
-		dev_sigmaxx[iGlobal] = mxx;
-		dev_sigmayy[iGlobal] = myy;
-		dev_sigmazz[iGlobal] = mzz;
 
 		//Scattering Sigmaxz component
 		dev_sigmaxz[iGlobal] = dev_dmuxz[iGlobal]*(
