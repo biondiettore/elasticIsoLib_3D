@@ -398,6 +398,10 @@ void allocateBornElasticGpu_3D(double *rhoxDtw, double *rhoyDtw, double *rhozDtw
 		cuda_call(cudaMemcpy(dev_muxyDtw[iGpu], muxyDtw, nModel*sizeof(double), cudaMemcpyHostToDevice));
 		cuda_call(cudaMemcpy(dev_muyzDtw[iGpu], muyzDtw, nModel*sizeof(double), cudaMemcpyHostToDevice));
 
+
+		std::cout << "Min value lamb2MuDtw = " << *std::min_element(lamb2MuDtw,lamb2MuDtw+nModel) << std::endl;
+		std::cout << "Max value lamb2MuDtw = " << *std::max_element(lamb2MuDtw,lamb2MuDtw+nModel) << std::endl;
+
 		// Allocate wavefield time slices on device (for the stepper)
 		cuda_call(cudaMalloc((void**) &dev_p0_vx[iGpu], nModel*sizeof(double)));
 		cuda_call(cudaMalloc((void**) &dev_p0_vy[iGpu], nModel*sizeof(double)));
@@ -1173,7 +1177,7 @@ void BornElasticFwdGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 			cuda_call(cudaStreamSynchronize(compStream));
 			cuda_call(cudaMemcpyAsync(dev_pStream_Vx[iGpu], host_pinned_wavefield_vx[iGpu]+(its+3)*nModel, nModel*sizeof(double), cudaMemcpyHostToDevice, transferStream));
 			cuda_call(cudaMemcpyAsync(dev_pStream_Vy[iGpu], host_pinned_wavefield_vy[iGpu]+(its+3)*nModel, nModel*sizeof(double), cudaMemcpyHostToDevice, transferStream));
-			cuda_call(cudaMemcpyAsync(dev_pStream_Vz[iGpu], host_pinned_wavefield_vy[iGpu]+(its+3)*nModel, nModel*sizeof(double), cudaMemcpyHostToDevice, transferStream));
+			cuda_call(cudaMemcpyAsync(dev_pStream_Vz[iGpu], host_pinned_wavefield_vz[iGpu]+(its+3)*nModel, nModel*sizeof(double), cudaMemcpyHostToDevice, transferStream));
 		}
 
 
