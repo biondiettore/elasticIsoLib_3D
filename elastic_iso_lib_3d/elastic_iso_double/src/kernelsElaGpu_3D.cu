@@ -1083,8 +1083,6 @@ __global__ void imagingElaFwdGpu_3D(double* dev_o_vx, double* dev_c_vx, double* 
 
 __global__ void imagingElaAdjGpu_3D(double* dev_o_vx, double* dev_c_vx, double* dev_n_vx, double* dev_o_vy, double* dev_c_vy, double* dev_n_vy, double* dev_o_vz, double* dev_c_vz, double* dev_n_vz, double* dev_vx, double* dev_vy, double* dev_vz, double* dev_sigmaxx, double* dev_sigmayy, double* dev_sigmazz, double* dev_sigmaxz, double* dev_sigmaxy, double* dev_sigmayz, double* dev_drhox, double* dev_drhoy, double* dev_drhoz, double* dev_dlame, double* dev_dmu, double* dev_dmuxz, double* dev_dmuxy, double* dev_dmuyz, int nx, int ny, int nz, int its){
 
-	// The perturbations dev_drho_i, dev_dlame, dev_dmu, dev_mu_ij must not be scaled to being able to apply "self-adjoint" operators
-
 	// Allocate shared memory for a specific block
 	__shared__ double shared_c_vx[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vx wavefield y-slice block
 	__shared__ double shared_c_vy[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vy wavefield y-slice block

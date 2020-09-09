@@ -323,16 +323,16 @@ void BornElasticGpu_3D::adjoint(const bool add, const std::shared_ptr<double4DRe
   }
 
 	/*Scaling by the inverse of the space discretization*/
-	double area_scale = 1.0/(_fdParamElastic->_dx * _fdParamElastic->_dy * _fdParamElastic->_dz);
-	dataRegDts_vx->scale(area_scale);
-	dataRegDts_vy->scale(area_scale);
-  dataRegDts_vz->scale(area_scale);
-  dataRegDts_sigmaxx->scale(area_scale);
-	dataRegDts_sigmayy->scale(area_scale);
-  dataRegDts_sigmazz->scale(area_scale);
-  dataRegDts_sigmaxz->scale(area_scale);
-	dataRegDts_sigmaxy->scale(area_scale);
-	dataRegDts_sigmayz->scale(area_scale);
+	// double area_scale = 1.0/(_fdParamElastic->_dx * _fdParamElastic->_dy * _fdParamElastic->_dz);
+	// dataRegDts_vx->scale(area_scale);
+	// dataRegDts_vy->scale(area_scale);
+  // dataRegDts_vz->scale(area_scale);
+  // dataRegDts_sigmaxx->scale(area_scale);
+	// dataRegDts_sigmayy->scale(area_scale);
+  // dataRegDts_sigmazz->scale(area_scale);
+  // dataRegDts_sigmaxz->scale(area_scale);
+	// dataRegDts_sigmaxy->scale(area_scale);
+	// dataRegDts_sigmayz->scale(area_scale);
 
 	int nx = _fdParamElastic->_nx;
 	int ny = _fdParamElastic->_ny;
