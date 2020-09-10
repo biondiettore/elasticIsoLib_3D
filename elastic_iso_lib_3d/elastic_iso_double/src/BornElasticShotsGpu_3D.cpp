@@ -181,6 +181,9 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
 		long long nModel = nx;
 		nModel *= ny * nz;
 
+		//DEBUG
+		modelSlice->scale(0.0);
+
     //Density perturbation
     //drho_x
     std::memcpy(temp_stag->getVals(), model->getVals(), nModel*sizeof(double));
@@ -196,26 +199,26 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
     std::memcpy(modelSlice->getVals()+2*nModel, temp_stag1->getVals(), nModel*sizeof(double));
 
     //dlame
-    std::memcpy(modelSlice->getVals()+3*nModel, model->getVals()+nModel, nModel*sizeof(double) );
+    // std::memcpy(modelSlice->getVals()+3*nModel, model->getVals()+nModel, nModel*sizeof(double) );
 
     //Shear modulus perturbations
     //dmu
-    std::memcpy(modelSlice->getVals()+4*nModel, model->getVals()+2*nModel, nModel*sizeof(double) );
+    // std::memcpy(modelSlice->getVals()+4*nModel, model->getVals()+2*nModel, nModel*sizeof(double) );
     //dmu_xz
-    std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
-    staggerXop->adjoint(false, temp_stag1, temp_stag);
-    staggerZop->adjoint(false, temp_stag, temp_stag1);
-    std::memcpy(modelSlice->getVals()+5*nModel, temp_stag->getVals(), nModel*sizeof(double) );
+    // std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
+    // staggerXop->adjoint(false, temp_stag1, temp_stag);
+    // staggerZop->adjoint(false, temp_stag, temp_stag1);
+    // std::memcpy(modelSlice->getVals()+5*nModel, temp_stag->getVals(), nModel*sizeof(double) );
 		//dmu_xy
-    std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
-    staggerXop->adjoint(false, temp_stag1, temp_stag);
-    staggerYop->adjoint(false, temp_stag, temp_stag1);
-    std::memcpy(modelSlice->getVals()+6*nModel, temp_stag->getVals(), nModel*sizeof(double) );
+    // std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
+    // staggerXop->adjoint(false, temp_stag1, temp_stag);
+    // staggerYop->adjoint(false, temp_stag, temp_stag1);
+    // std::memcpy(modelSlice->getVals()+6*nModel, temp_stag->getVals(), nModel*sizeof(double) );
 		//dmu_yz
-    std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
-    staggerYop->adjoint(false, temp_stag1, temp_stag);
-    staggerZop->adjoint(false, temp_stag, temp_stag1);
-    std::memcpy(modelSlice->getVals()+7*nModel, temp_stag->getVals(), nModel*sizeof(double) );
+    // std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
+    // staggerYop->adjoint(false, temp_stag1, temp_stag);
+    // staggerZop->adjoint(false, temp_stag, temp_stag1);
+    // std::memcpy(modelSlice->getVals()+7*nModel, temp_stag->getVals(), nModel*sizeof(double) );
 
 		//Scaling of the perturbations
     #pragma omp for collapse(3)
@@ -410,14 +413,14 @@ void BornElasticShotsGpu_3D::adjoint(const bool add, const std::shared_ptr<doubl
 		for (long long iy = 0; iy < ny; iy++){
     	for (long long ix = 0; ix < nx; ix++){
     		for (long long iz = 0; iz < nz; iz++) {
-    			(*modelSlicesVector[0]->_mat)[0][iy][ix][iz] *= (*_fdParamElastic->_rhoxDtwReg->_mat)[iy][ix][iz];
-					(*modelSlicesVector[0]->_mat)[1][iy][ix][iz] *= (*_fdParamElastic->_rhoyDtwReg->_mat)[iy][ix][iz];
-    			(*modelSlicesVector[0]->_mat)[2][iy][ix][iz] *= (*_fdParamElastic->_rhozDtwReg->_mat)[iy][ix][iz];
-	    		(*modelSlicesVector[0]->_mat)[3][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
-	    		(*modelSlicesVector[0]->_mat)[4][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
-					(*modelSlicesVector[0]->_mat)[5][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
-	    		(*modelSlicesVector[0]->_mat)[6][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
-					(*modelSlicesVector[0]->_mat)[7][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+    			// (*modelSlicesVector[0]->_mat)[0][iy][ix][iz] *= (*_fdParamElastic->_rhoxDtwReg->_mat)[iy][ix][iz];
+					// (*modelSlicesVector[0]->_mat)[1][iy][ix][iz] *= (*_fdParamElastic->_rhoyDtwReg->_mat)[iy][ix][iz];
+    			// (*modelSlicesVector[0]->_mat)[2][iy][ix][iz] *= (*_fdParamElastic->_rhozDtwReg->_mat)[iy][ix][iz];
+	    		// (*modelSlicesVector[0]->_mat)[3][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+	    		// (*modelSlicesVector[0]->_mat)[4][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+					// (*modelSlicesVector[0]->_mat)[5][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+	    		// (*modelSlicesVector[0]->_mat)[6][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+					// (*modelSlicesVector[0]->_mat)[7][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
     		}
     	}
 		}
@@ -450,27 +453,27 @@ void BornElasticShotsGpu_3D::adjoint(const bool add, const std::shared_ptr<doubl
 
 
     //dmu_xz
-		std::memcpy(temp_stag2->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
-    std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+5*nModel, nModel*sizeof(double) );
-    staggerXop->forward(false, temp_stag1, temp_stag);
-    staggerZop->forward(true, temp_stag, temp_stag2);
+		// std::memcpy(temp_stag2->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
+    // std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+5*nModel, nModel*sizeof(double) );
+    // staggerXop->forward(false, temp_stag1, temp_stag);
+    // staggerZop->forward(true, temp_stag, temp_stag2);
 		//dmu_xy
-    std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+6*nModel, nModel*sizeof(double) );
-    staggerXop->forward(false, temp_stag1, temp_stag);
-    staggerYop->forward(true, temp_stag, temp_stag2);
+    // std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+6*nModel, nModel*sizeof(double) );
+    // staggerXop->forward(false, temp_stag1, temp_stag);
+    // staggerYop->forward(true, temp_stag, temp_stag2);
 		//dmu_yz
-    std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+7*nModel, nModel*sizeof(double) );
-    staggerYop->forward(false, temp_stag1, temp_stag);
-    staggerZop->forward(true, temp_stag, temp_stag2);
+    // std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+7*nModel, nModel*sizeof(double) );
+    // staggerYop->forward(false, temp_stag1, temp_stag);
+    // staggerZop->forward(true, temp_stag, temp_stag2);
 
 		#pragma omp for collapse(3)
 		for (long long iy = 0; iy < ny; iy++){
     	for (long long ix = 0; ix < nx; ix++){
     		for (long long iz = 0; iz < nz; iz++) {
 					//D_LAME
-					(*model->_mat)[1][iy][ix][iz] += (*modelSlicesVector[0]->_mat)[3][iy][ix][iz];
+					// (*model->_mat)[1][iy][ix][iz] += (*modelSlicesVector[0]->_mat)[3][iy][ix][iz];
 					//D_MU
-					(*model->_mat)[2][iy][ix][iz] += (*modelSlicesVector[0]->_mat)[4][iy][ix][iz] + (*temp_stag2->_mat)[iy][ix][iz];
+					// (*model->_mat)[2][iy][ix][iz] += (*modelSlicesVector[0]->_mat)[4][iy][ix][iz] + (*temp_stag2->_mat)[iy][ix][iz];
     		}
     	}
 		}

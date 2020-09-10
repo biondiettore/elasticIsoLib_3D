@@ -743,7 +743,7 @@ void modelCopyToGpu_3D(double *drhox, double *drhoy, double *drhoz, double *dlam
 		cuda_call(cudaMemcpy(dev_drhoy[iGpu], drhoy, nModel*sizeof(double), cudaMemcpyHostToDevice));
 		cuda_call(cudaMemcpy(dev_drhoz[iGpu], drhoz, nModel*sizeof(double), cudaMemcpyHostToDevice));
 		cuda_call(cudaMemcpy(dev_dlame[iGpu], dlame, nModel*sizeof(double), cudaMemcpyHostToDevice));
-		cuda_call(cudaMemcpy(dev_dmu[iGpu], dmu, nModel*sizeof(double), cudaMemcpyHostToDevice));
+		cuda_call(cudaMemcpy(dev_dmu[iGpu],     dmu, nModel*sizeof(double), cudaMemcpyHostToDevice));
 		cuda_call(cudaMemcpy(dev_dmuxz[iGpu], dmuxz, nModel*sizeof(double), cudaMemcpyHostToDevice));
 		cuda_call(cudaMemcpy(dev_dmuxy[iGpu], dmuxy, nModel*sizeof(double), cudaMemcpyHostToDevice));
 		cuda_call(cudaMemcpy(dev_dmuyz[iGpu], dmuyz, nModel*sizeof(double), cudaMemcpyHostToDevice));
@@ -1431,9 +1431,9 @@ void BornElasticAdjGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 	//Note the perturbations have been already scaled by the wave-equation source scaling factor outside of this function
 
 	// Copy wavefield time-slice its = 0: pinned -> dev_pSourceWavefield_old
-	cuda_call(cudaMemcpyAsync(dev_wavefieldVx_left[iGpu], host_pinned_wavefield_vx[iGpu]+(host_nts-1)*nModel, nModel*sizeof(double), cudaMemcpyHostToDevice, transferStream));
-	cuda_call(cudaMemcpyAsync(dev_wavefieldVy_left[iGpu], host_pinned_wavefield_vy[iGpu]+(host_nts-1)*nModel, nModel*sizeof(double), cudaMemcpyHostToDevice, transferStream));
-	cuda_call(cudaMemcpyAsync(dev_wavefieldVz_left[iGpu], host_pinned_wavefield_vz[iGpu]+(host_nts-1)*nModel, nModel*sizeof(double), cudaMemcpyHostToDevice, transferStream));
+	cuda_call(cudaMemcpyAsync(dev_wavefieldVx_right[iGpu], host_pinned_wavefield_vx[iGpu]+(host_nts-1)*nModel, nModel*sizeof(double), cudaMemcpyHostToDevice, transferStream));
+	cuda_call(cudaMemcpyAsync(dev_wavefieldVy_right[iGpu], host_pinned_wavefield_vy[iGpu]+(host_nts-1)*nModel, nModel*sizeof(double), cudaMemcpyHostToDevice, transferStream));
+	cuda_call(cudaMemcpyAsync(dev_wavefieldVz_right[iGpu], host_pinned_wavefield_vz[iGpu]+(host_nts-1)*nModel, nModel*sizeof(double), cudaMemcpyHostToDevice, transferStream));
 
 	// Copy wavefield time-slice its = 1: pinned -> dev_pSourceWavefield_cur
 	cuda_call(cudaMemcpyAsync(dev_wavefieldVx_cur[iGpu], host_pinned_wavefield_vx[iGpu]+(host_nts-2)*nModel, nModel*sizeof(double), cudaMemcpyHostToDevice, transferStream));
@@ -1479,7 +1479,6 @@ void BornElasticAdjGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 			cuda_call(cudaStreamSynchronize(transferStream));
 
 			if (its < host_nts-2){
-				cuda_call(cudaStreamSynchronize(compStream)); //DEBUG
 				// Streams related pointers
 				switchPointers_wavefield3Slices_adj_3D(iGpu);
 			}
@@ -1513,7 +1512,7 @@ void BornElasticAdjGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 
 	// Copy model back to host
 	cuda_call(cudaMemcpy(drhox, dev_drhox[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost));
-	cuda_call(cudaMemcpy(drhoy, dev_drhox[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost));
+	cuda_call(cudaMemcpy(drhoy, dev_drhoy[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost));
 	cuda_call(cudaMemcpy(drhoz, dev_drhoz[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost));
 	cuda_call(cudaMemcpy(dlame, dev_dlame[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost));
 	cuda_call(cudaMemcpy(dmu, dev_dmu[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost));
