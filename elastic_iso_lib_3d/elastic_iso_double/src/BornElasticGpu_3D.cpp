@@ -255,7 +255,7 @@ void BornElasticGpu_3D::adjoint(const bool add, const std::shared_ptr<double4DRe
 	_receiversXYGrid->adjoint(false, dataRegDts_sigmaxy, dataIrreg_sigmaxy);
 	_receiversYZGrid->adjoint(false, dataRegDts_sigmayz, dataIrreg_sigmayz);
 
-	/* Scale recorded data */
+	// /* Scale recorded data */
 	// Vx
 	#pragma omp parallel for collapse(2)
   for(long long ir = 0; ir < _nReceiversRegXGrid; ir++){ //loop over number of reg receiver x grid
@@ -322,25 +322,13 @@ void BornElasticGpu_3D::adjoint(const bool add, const std::shared_ptr<double4DRe
 		}
   }
 
-	/*Scaling by the inverse of the space discretization*/
-	// double area_scale = 1.0/(_fdParamElastic->_dx * _fdParamElastic->_dy * _fdParamElastic->_dz);
-	// dataRegDts_vx->scale(area_scale);
-	// dataRegDts_vy->scale(area_scale);
-  // dataRegDts_vz->scale(area_scale);
-  // dataRegDts_sigmaxx->scale(area_scale);
-	// dataRegDts_sigmayy->scale(area_scale);
-  // dataRegDts_sigmazz->scale(area_scale);
-  // dataRegDts_sigmaxz->scale(area_scale);
-	// dataRegDts_sigmaxy->scale(area_scale);
-	// dataRegDts_sigmayz->scale(area_scale);
-
 	int nx = _fdParamElastic->_nx;
 	int ny = _fdParamElastic->_ny;
 	int nz = _fdParamElastic->_nz;
 	long long nModel = nx;
 	nModel *= ny * nz;
 
-	//Getting already staggered model perturbations
+	//Getting model perturbations
 	double *drhox_in = model->getVals();
 	double *drhoy_in = model->getVals()+nModel;
 	double *drhoz_in = model->getVals()+2*nModel;

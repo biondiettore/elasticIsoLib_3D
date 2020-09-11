@@ -57,7 +57,9 @@ class Operator
 			std::cout << "dot Test 2" << std::endl;
 			/* Compute dot product WITHOUT "add" */
 
+			std::cout << "Applying adjoint" << std::endl;
 			adjoint(false, d2, r1);
+			std::cout << "Applying forward" << std::endl;
 			forward(false, d1, r2);
 			std::cout << "dot Test 3" << std::endl;
 			double dot1 = r1->dot(r2), dot2 = d1->dot(d2);

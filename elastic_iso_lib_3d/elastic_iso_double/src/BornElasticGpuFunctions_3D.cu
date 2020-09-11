@@ -1065,12 +1065,12 @@ void launchExtractInterpAdjointWavefield_3D(dim3 dimGrid, dim3 dimBlock, int nx,
 	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssVxLeft[iGpu], dev_ssVxRight[iGpu], dev_p0_vx[iGpu], nx, ny, nz, it2));
 	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssVyLeft[iGpu], dev_ssVyRight[iGpu], dev_p0_vy[iGpu], nx, ny, nz, it2));
 	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssVzLeft[iGpu], dev_ssVzRight[iGpu], dev_p0_vz[iGpu], nx, ny, nz, it2));
-	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssSigmaxxLeft[iGpu], dev_ssSigmaxxLeft[iGpu], dev_p0_sigmaxx[iGpu], nx, ny, nz, it2));
-	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssSigmayyLeft[iGpu], dev_ssSigmayyLeft[iGpu], dev_p0_sigmayy[iGpu], nx, ny, nz, it2));
-	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssSigmazzLeft[iGpu], dev_ssSigmazzLeft[iGpu], dev_p0_sigmazz[iGpu], nx, ny, nz, it2));
-	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssSigmaxzLeft[iGpu], dev_ssSigmaxzLeft[iGpu], dev_p0_sigmaxz[iGpu], nx, ny, nz, it2));
-	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssSigmaxyLeft[iGpu], dev_ssSigmaxyLeft[iGpu], dev_p0_sigmaxy[iGpu], nx, ny, nz, it2));
-	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssSigmayzLeft[iGpu], dev_ssSigmayzLeft[iGpu], dev_p0_sigmayz[iGpu], nx, ny, nz, it2));
+	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssSigmaxxLeft[iGpu], dev_ssSigmaxxRight[iGpu], dev_p0_sigmaxx[iGpu], nx, ny, nz, it2));
+	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssSigmayyLeft[iGpu], dev_ssSigmayyRight[iGpu], dev_p0_sigmayy[iGpu], nx, ny, nz, it2));
+	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssSigmazzLeft[iGpu], dev_ssSigmazzRight[iGpu], dev_p0_sigmazz[iGpu], nx, ny, nz, it2));
+	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssSigmaxzLeft[iGpu], dev_ssSigmaxzRight[iGpu], dev_p0_sigmaxz[iGpu], nx, ny, nz, it2));
+	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssSigmaxyLeft[iGpu], dev_ssSigmaxyRight[iGpu], dev_p0_sigmaxy[iGpu], nx, ny, nz, it2));
+	kernel_stream_exec(extractInterpAdjointWavefield_3D<<<dimGrid, dimBlock, 0, stream>>>(dev_ssSigmayzLeft[iGpu], dev_ssSigmayzRight[iGpu], dev_p0_sigmayz[iGpu], nx, ny, nz, it2));
 }
 
 /************************************************/
@@ -1338,6 +1338,11 @@ void BornElasticAdjGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 	//       d) allocate and copy wavefield time slices to gpu
 	setupAdjGpu_3D(sourceRegDts_vx, sourceRegDts_vy, sourceRegDts_vz, sourceRegDts_sigmaxx, sourceRegDts_sigmayy, sourceRegDts_sigmazz, sourceRegDts_sigmaxz, sourceRegDts_sigmaxy, sourceRegDts_sigmayz, dataRegDts_vx, dataRegDts_vy, dataRegDts_vz, dataRegDts_sigmaxx, dataRegDts_sigmayy, dataRegDts_sigmazz, dataRegDts_sigmaxz, dataRegDts_sigmaxy, dataRegDts_sigmayz, sourcesPositionRegCenterGrid, nSourcesRegCenterGrid, sourcesPositionRegXGrid, nSourcesRegXGrid, sourcesPositionRegYGrid, nSourcesRegYGrid, sourcesPositionRegZGrid, nSourcesRegZGrid, sourcesPositionRegXZGrid, nSourcesRegXZGrid, sourcesPositionRegXYGrid, nSourcesRegXYGrid, sourcesPositionRegYZGrid, nSourcesRegYZGrid, receiversPositionRegCenterGrid, nReceiversRegCenterGrid, receiversPositionRegXGrid, nReceiversRegXGrid, receiversPositionRegYGrid, nReceiversRegYGrid, receiversPositionRegZGrid, nReceiversRegZGrid, receiversPositionRegXZGrid, nReceiversRegXZGrid, receiversPositionRegXYGrid, nReceiversRegXYGrid, receiversPositionRegYZGrid, nReceiversRegYZGrid, nx, ny, nz, iGpu, iGpuId);
 
+	long long nModel = nx;
+	nModel *= ny * nz;
+
+	modelCopyToGpu_3D(drhox, drhoy, drhoz, dlame, dmu, dmuxz, dmuxy, dmuyz, nModel, iGpu);
+
 	//Finite-difference grid and blocks
 	int nblockx = (nz-2*FAT) / BLOCK_SIZE;
 	int nblocky = (nx-2*FAT) / BLOCK_SIZE;
@@ -1365,9 +1370,6 @@ void BornElasticAdjGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 	// Create streams for saving the wavefield
 	cudaStreamCreate(&compStream);
 	cudaStreamCreate(&transferStream);
-
-	long long nModel = nx;
-	nModel *= ny * nz;
 
 	wavefieldSliceInitializeGpu_3D(nModel, iGpu);
 
@@ -1460,7 +1462,7 @@ void BornElasticAdjGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 					launchAdjInterpInjectDataKernels_3D(nblockDataCenterGrid, nblockDataXGrid, nblockDataYGrid, nblockDataZGrid, nblockDataXZGrid, nblockDataXYGrid, nblockDataYZGrid, nReceiversRegCenterGrid, nReceiversRegXGrid, nReceiversRegYGrid, nReceiversRegZGrid, nReceiversRegXZGrid, nReceiversRegXYGrid, nReceiversRegYZGrid, its, it2, iGpu, compStream);
 					// Damp wavefield
 					launchDampCosineEdgeKernels_3D(dimGrid, dimBlock, nx, ny, nz, iGpu, compStream);
-					// Interpolate and record time slices of receiver wavefield at coarse sampling (no scaling applied yet)
+					// Interpolate and record time slices of receiver wavefield at coarse sampling
 					launchExtractInterpAdjointWavefield_3D(dimGrid, dimBlock, nx, ny, nz, iGpu, it2, compStream);
 
 					// Switch pointers
@@ -1470,9 +1472,9 @@ void BornElasticAdjGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 			// Apply extended imaging condition for its+1
 			if (its == host_nts-2){
 				// Last step must be different since left => (its-3), cur => (its-2), right => (its-1)
-				kernel_stream_exec(imagingElaAdjGpu_3D<<<dimGrid, dimBlock, 0, compStream>>>(dev_wavefieldVx_cur[iGpu], dev_wavefieldVx_right[iGpu], NULL, dev_wavefieldVy_cur[iGpu], dev_wavefieldVy_right[iGpu], NULL, dev_wavefieldVz_cur[iGpu], dev_wavefieldVz_right[iGpu], NULL, dev_ssVxRight[iGpu], dev_ssVyRight[iGpu], dev_ssVzRight[iGpu], dev_ssSigmaxxRight[iGpu], dev_ssSigmayyRight[iGpu], dev_ssSigmazzRight[iGpu], dev_ssSigmaxzRight[iGpu], dev_ssSigmaxyRight[iGpu], dev_ssSigmayzRight[iGpu], dev_drhox[iGpu], dev_drhoy[iGpu], dev_drhoz[iGpu], dev_dlame[iGpu], dev_dmu[iGpu], dev_dmuxz[iGpu], dev_dmuxy[iGpu], dev_dmuyz[iGpu], nx, ny, nz, its+1));
+				kernel_stream_exec(imagingElaAdjGpu_3D<<<dimGrid, dimBlock, 0, compStream>>>(dev_wavefieldVx_cur[iGpu], dev_wavefieldVx_right[iGpu], NULL, dev_wavefieldVy_cur[iGpu], dev_wavefieldVy_right[iGpu], NULL, dev_wavefieldVz_cur[iGpu], dev_wavefieldVz_right[iGpu], NULL, dev_ssVxRight[iGpu], dev_ssVyRight[iGpu], dev_ssVzRight[iGpu], dev_ssSigmaxxRight[iGpu], dev_ssSigmayyRight[iGpu], dev_ssSigmazzRight[iGpu], dev_ssSigmaxzRight[iGpu], dev_ssSigmaxyRight[iGpu], dev_ssSigmayzRight[iGpu], dev_drhox[iGpu], dev_drhoy[iGpu], dev_drhoz[iGpu], dev_dlame[iGpu], dev_dmu[iGpu], dev_dmuxz[iGpu], dev_dmuxy[iGpu], dev_dmuyz[iGpu], dev_muxzDtw[iGpu], dev_muxyDtw[iGpu], dev_muyzDtw[iGpu], nx, ny, nz, its+1));
 			} else {
-				kernel_stream_exec(imagingElaAdjGpu_3D<<<dimGrid, dimBlock, 0, compStream>>>(dev_wavefieldVx_left[iGpu], dev_wavefieldVx_cur[iGpu], dev_wavefieldVx_right[iGpu], dev_wavefieldVy_left[iGpu], dev_wavefieldVy_cur[iGpu], dev_wavefieldVy_right[iGpu], dev_wavefieldVz_left[iGpu], dev_wavefieldVz_cur[iGpu], dev_wavefieldVz_right[iGpu], dev_ssVxRight[iGpu], dev_ssVyRight[iGpu], dev_ssVzRight[iGpu], dev_ssSigmaxxRight[iGpu], dev_ssSigmayyRight[iGpu], dev_ssSigmazzRight[iGpu], dev_ssSigmaxzRight[iGpu], dev_ssSigmaxyRight[iGpu], dev_ssSigmayzRight[iGpu], dev_drhox[iGpu], dev_drhoy[iGpu], dev_drhoz[iGpu], dev_dlame[iGpu], dev_dmu[iGpu], dev_dmuxz[iGpu], dev_dmuxy[iGpu], dev_dmuyz[iGpu], nx, ny, nz, its+1));
+				kernel_stream_exec(imagingElaAdjGpu_3D<<<dimGrid, dimBlock, 0, compStream>>>(dev_wavefieldVx_left[iGpu], dev_wavefieldVx_cur[iGpu], dev_wavefieldVx_right[iGpu], dev_wavefieldVy_left[iGpu], dev_wavefieldVy_cur[iGpu], dev_wavefieldVy_right[iGpu], dev_wavefieldVz_left[iGpu], dev_wavefieldVz_cur[iGpu], dev_wavefieldVz_right[iGpu], dev_ssVxRight[iGpu], dev_ssVyRight[iGpu], dev_ssVzRight[iGpu], dev_ssSigmaxxRight[iGpu], dev_ssSigmayyRight[iGpu], dev_ssSigmazzRight[iGpu], dev_ssSigmaxzRight[iGpu], dev_ssSigmaxyRight[iGpu], dev_ssSigmayzRight[iGpu], dev_drhox[iGpu], dev_drhoy[iGpu], dev_drhoz[iGpu], dev_dlame[iGpu], dev_dmu[iGpu], dev_dmuxz[iGpu], dev_dmuxy[iGpu], dev_dmuyz[iGpu], dev_muxzDtw[iGpu], dev_muxyDtw[iGpu], dev_muyzDtw[iGpu], nx, ny, nz, its+1));
 			}
 
 			// Wait until transfer stream has finished copying slice its from pinned -> pStream
@@ -1506,7 +1508,7 @@ void BornElasticAdjGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 
 	}// Finished main loop - we still have to compute imaging condition for its=0
 
-	kernel_stream_exec(imagingElaAdjGpu_3D<<<dimGrid, dimBlock, 0, compStream>>>(NULL, dev_wavefieldVx_cur[iGpu], dev_wavefieldVx_right[iGpu], NULL, dev_wavefieldVy_cur[iGpu], dev_wavefieldVy_right[iGpu], NULL, dev_wavefieldVz_cur[iGpu], dev_wavefieldVz_right[iGpu], dev_ssVxRight[iGpu], dev_ssVyRight[iGpu], dev_ssVzRight[iGpu], dev_ssSigmaxxRight[iGpu], dev_ssSigmayyRight[iGpu], dev_ssSigmazzRight[iGpu], dev_ssSigmaxzRight[iGpu], dev_ssSigmaxyRight[iGpu], dev_ssSigmayzRight[iGpu], dev_drhox[iGpu], dev_drhoy[iGpu], dev_drhoz[iGpu], dev_dlame[iGpu], dev_dmu[iGpu], dev_dmuxz[iGpu], dev_dmuxy[iGpu], dev_dmuyz[iGpu], nx, ny, nz, 0));
+	kernel_stream_exec(imagingElaAdjGpu_3D<<<dimGrid, dimBlock, 0, compStream>>>(NULL, dev_wavefieldVx_cur[iGpu], dev_wavefieldVx_right[iGpu], NULL, dev_wavefieldVy_cur[iGpu], dev_wavefieldVy_right[iGpu], NULL, dev_wavefieldVz_cur[iGpu], dev_wavefieldVz_right[iGpu], dev_ssVxRight[iGpu], dev_ssVyRight[iGpu], dev_ssVzRight[iGpu], dev_ssSigmaxxRight[iGpu], dev_ssSigmayyRight[iGpu], dev_ssSigmazzRight[iGpu], dev_ssSigmaxzRight[iGpu], dev_ssSigmaxyRight[iGpu], dev_ssSigmayzRight[iGpu], dev_drhox[iGpu], dev_drhoy[iGpu], dev_drhoz[iGpu], dev_dlame[iGpu], dev_dmu[iGpu], dev_dmuxz[iGpu], dev_dmuxy[iGpu], dev_dmuyz[iGpu], dev_muxzDtw[iGpu], dev_muxyDtw[iGpu], dev_muyzDtw[iGpu], nx, ny, nz, 0));
 	cuda_call(cudaStreamSynchronize(compStream));
 
 
@@ -1519,7 +1521,6 @@ void BornElasticAdjGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 	cuda_call(cudaMemcpy(dmuxz, dev_dmuxz[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost));
 	cuda_call(cudaMemcpy(dmuxy, dev_dmuxy[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost));
 	cuda_call(cudaMemcpy(dmuyz, dev_dmuyz[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost));
-
 
 	// Deallocate all slices
 	cuda_call(cudaFree(dev_sourceRegDts_vx[iGpu]));

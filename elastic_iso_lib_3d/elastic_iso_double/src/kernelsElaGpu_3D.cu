@@ -1022,11 +1022,11 @@ __global__ void imagingElaFwdGpu_3D(double* dev_o_vx, double* dev_c_vx, double* 
         dev_vz[iGlobal] = dev_drhoz[iGlobal] * (dev_o_vz[iGlobal] - dev_n_vz[iGlobal])*dev_dts_inv;
     }
 
-		double dvxyz_dxyz = dvx_dx + dvy_dy + dvz_dz;
+		// double dvxyz_dxyz = dvx_dx + dvy_dy + dvz_dz;
 
 		//Scattering Sigmaxx component
     // dev_sigmaxx[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvx_dx;
-		// dev_sigmaxx[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz; //DEBUG
+		// dev_sigmaxx[iGlobal] = dev_dlame[iGlobal] * dev_c_vx[iGlobal]; //DEBUG
 		// Scattering Sigmayy component
     // dev_sigmayy[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz + 2.0 * dev_dmu[iGlobal] * dvy_dy;
 		// dev_sigmayy[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz; //DEBUG
@@ -1035,46 +1035,46 @@ __global__ void imagingElaFwdGpu_3D(double* dev_o_vx, double* dev_c_vx, double* 
 		// dev_sigmazz[iGlobal] = dev_dlame[iGlobal] * dvxyz_dxyz; //DEBUG
 
 		//Scattering Sigmaxz component
-		// dev_sigmaxz[iGlobal] = dev_dmuxz[iGlobal]*(
-		// 												 // dvx_dz (-)
-		// 												 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
-		// 												 dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
-		// 												 dev_zCoeff[2]*(shared_c_vx[ixLocal][izLocal+2]-shared_c_vx[ixLocal][izLocal-3])+
-		// 												 dev_zCoeff[3]*(shared_c_vx[ixLocal][izLocal+3]-shared_c_vx[ixLocal][izLocal-4])+
-		// 												 // dvz_dx (-)
-		// 												 dev_xCoeff[0]*(shared_c_vz[ixLocal][izLocal]-shared_c_vz[ixLocal-1][izLocal])  +
-		// 												 dev_xCoeff[1]*(shared_c_vz[ixLocal+1][izLocal]-shared_c_vz[ixLocal-2][izLocal])+
-		// 												 dev_xCoeff[2]*(shared_c_vz[ixLocal+2][izLocal]-shared_c_vz[ixLocal-3][izLocal])+
-		// 												 dev_xCoeff[3]*(shared_c_vz[ixLocal+3][izLocal]-shared_c_vz[ixLocal-4][izLocal])
-		// 											);
+		dev_sigmaxz[iGlobal] = dev_dmuxz[iGlobal]*(
+														 // dvx_dz (-)
+														 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
+														 dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
+														 dev_zCoeff[2]*(shared_c_vx[ixLocal][izLocal+2]-shared_c_vx[ixLocal][izLocal-3])+
+														 dev_zCoeff[3]*(shared_c_vx[ixLocal][izLocal+3]-shared_c_vx[ixLocal][izLocal-4])+
+														 // dvz_dx (-)
+														 dev_xCoeff[0]*(shared_c_vz[ixLocal][izLocal]-shared_c_vz[ixLocal-1][izLocal])  +
+														 dev_xCoeff[1]*(shared_c_vz[ixLocal+1][izLocal]-shared_c_vz[ixLocal-2][izLocal])+
+														 dev_xCoeff[2]*(shared_c_vz[ixLocal+2][izLocal]-shared_c_vz[ixLocal-3][izLocal])+
+														 dev_xCoeff[3]*(shared_c_vz[ixLocal+3][izLocal]-shared_c_vz[ixLocal-4][izLocal])
+													);
 
 		//Scattering Sigmaxy component
-		// dev_sigmaxy[iGlobal] = dev_dmuxy[iGlobal]*(
-		// 												 // dvx_dy (-)
-		// 												 dev_yCoeff[0]*(shared_c_vx[ixLocal][izLocal]-dev_c_vx_y[3])  +
-		// 											   dev_yCoeff[1]*(dev_c_vx_y[4]-dev_c_vx_y[2])+
-		// 											   dev_yCoeff[2]*(dev_c_vx_y[5]-dev_c_vx_y[1])+
-		// 											   dev_yCoeff[3]*(dev_c_vx_y[6]-dev_c_vx_y[0])+
-		// 												 // dvy_dx (-)
-		// 												 dev_xCoeff[0]*(shared_c_vy[ixLocal][izLocal]-shared_c_vy[ixLocal-1][izLocal])  +
-		// 											   dev_xCoeff[1]*(shared_c_vy[ixLocal+1][izLocal]-shared_c_vy[ixLocal-2][izLocal])+
-		// 											   dev_xCoeff[2]*(shared_c_vy[ixLocal+2][izLocal]-shared_c_vy[ixLocal-3][izLocal])+
-		// 											   dev_xCoeff[3]*(shared_c_vy[ixLocal+3][izLocal]-shared_c_vy[ixLocal-4][izLocal])
-		// 											);
+		dev_sigmaxy[iGlobal] = dev_dmuxy[iGlobal]*(
+														 // dvx_dy (-)
+														 dev_yCoeff[0]*(shared_c_vx[ixLocal][izLocal]-dev_c_vx_y[3])  +
+													   dev_yCoeff[1]*(dev_c_vx_y[4]-dev_c_vx_y[2])+
+													   dev_yCoeff[2]*(dev_c_vx_y[5]-dev_c_vx_y[1])+
+													   dev_yCoeff[3]*(dev_c_vx_y[6]-dev_c_vx_y[0])+
+														 // dvy_dx (-)
+														 dev_xCoeff[0]*(shared_c_vy[ixLocal][izLocal]-shared_c_vy[ixLocal-1][izLocal])  +
+													   dev_xCoeff[1]*(shared_c_vy[ixLocal+1][izLocal]-shared_c_vy[ixLocal-2][izLocal])+
+													   dev_xCoeff[2]*(shared_c_vy[ixLocal+2][izLocal]-shared_c_vy[ixLocal-3][izLocal])+
+													   dev_xCoeff[3]*(shared_c_vy[ixLocal+3][izLocal]-shared_c_vy[ixLocal-4][izLocal])
+													);
 
 		//Scattering Sigmayz component
-		// dev_sigmayz[iGlobal] = dev_dmuyz[iGlobal]*(
-		// 												 // dvx_dz (-)
-		// 												 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
-		// 											   dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
-		// 											   dev_zCoeff[2]*(shared_c_vx[ixLocal][izLocal+2]-shared_c_vx[ixLocal][izLocal-3])+
-		// 											   dev_zCoeff[3]*(shared_c_vx[ixLocal][izLocal+3]-shared_c_vx[ixLocal][izLocal-4])+
-		// 												 // dvz_dx (-)
-		// 												 dev_xCoeff[0]*(shared_c_vz[ixLocal][izLocal]-shared_c_vz[ixLocal-1][izLocal])  +
-		// 											   dev_xCoeff[1]*(shared_c_vz[ixLocal+1][izLocal]-shared_c_vz[ixLocal-2][izLocal])+
-		// 											   dev_xCoeff[2]*(shared_c_vz[ixLocal+2][izLocal]-shared_c_vz[ixLocal-3][izLocal])+
-		// 											   dev_xCoeff[3]*(shared_c_vz[ixLocal+3][izLocal]-shared_c_vz[ixLocal-4][izLocal])
-		// 											);
+		dev_sigmayz[iGlobal] = dev_dmuyz[iGlobal]*(
+														 // dvx_dz (-)
+														 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
+													   dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
+													   dev_zCoeff[2]*(shared_c_vx[ixLocal][izLocal+2]-shared_c_vx[ixLocal][izLocal-3])+
+													   dev_zCoeff[3]*(shared_c_vx[ixLocal][izLocal+3]-shared_c_vx[ixLocal][izLocal-4])+
+														 // dvz_dx (-)
+														 dev_xCoeff[0]*(shared_c_vz[ixLocal][izLocal]-shared_c_vz[ixLocal-1][izLocal])  +
+													   dev_xCoeff[1]*(shared_c_vz[ixLocal+1][izLocal]-shared_c_vz[ixLocal-2][izLocal])+
+													   dev_xCoeff[2]*(shared_c_vz[ixLocal+2][izLocal]-shared_c_vz[ixLocal-3][izLocal])+
+													   dev_xCoeff[3]*(shared_c_vz[ixLocal+3][izLocal]-shared_c_vz[ixLocal-4][izLocal])
+													);
 
 		// Move forward one grid point in the y-direction
 		iGlobal += yStride;
@@ -1083,8 +1083,7 @@ __global__ void imagingElaFwdGpu_3D(double* dev_o_vx, double* dev_c_vx, double* 
 
 }
 
-
-__global__ void imagingElaAdjGpu_3D(double* dev_o_vx, double* dev_c_vx, double* dev_n_vx, double* dev_o_vy, double* dev_c_vy, double* dev_n_vy, double* dev_o_vz, double* dev_c_vz, double* dev_n_vz, double* dev_vx, double* dev_vy, double* dev_vz, double* dev_sigmaxx, double* dev_sigmayy, double* dev_sigmazz, double* dev_sigmaxz, double* dev_sigmaxy, double* dev_sigmayz, double* dev_drhox, double* dev_drhoy, double* dev_drhoz, double* dev_dlame, double* dev_dmu, double* dev_dmuxz, double* dev_dmuxy, double* dev_dmuyz, int nx, int ny, int nz, int its){
+__global__ void imagingElaAdjGpu_3D(double* dev_o_vx, double* dev_c_vx, double* dev_n_vx, double* dev_o_vy, double* dev_c_vy, double* dev_n_vy, double* dev_o_vz, double* dev_c_vz, double* dev_n_vz, double* dev_vx, double* dev_vy, double* dev_vz, double* dev_sigmaxx, double* dev_sigmayy, double* dev_sigmazz, double* dev_sigmaxz, double* dev_sigmaxy, double* dev_sigmayz, double* dev_drhox, double* dev_drhoy, double* dev_drhoz, double* dev_dlame, double* dev_dmu, double* dev_dmuxz, double* dev_dmuxy, double* dev_dmuyz, double* dev_muxzDtw, double* dev_muxyDtw, double* dev_muyzDtw, int nx, int ny, int nz, int its){
 
 	// Allocate shared memory for a specific block
 	__shared__ double shared_c_vx[BLOCK_SIZE_X+2*FAT][BLOCK_SIZE_Z+2*FAT];  // Current Vx wavefield y-slice block
@@ -1236,50 +1235,56 @@ __global__ void imagingElaAdjGpu_3D(double* dev_o_vx, double* dev_c_vx, double* 
 
 		//Imaging lame
 		// dev_dlame[iGlobal] += (dev_sigmaxx[iGlobal] + dev_sigmayy[iGlobal] + dev_sigmazz[iGlobal]) * (dvx_dx + dvy_dy + dvz_dz);
+		// dev_dlame[iGlobal] += dev_sigmaxx[iGlobal] * dev_c_vx[iGlobal]; //DEBUG
 		//Imaging mu
 		// dev_dmu[iGlobal] += 2.0 * (dvx_dx*dev_sigmaxx[iGlobal] + dvy_dy*dev_sigmayy[iGlobal] + dvz_dz*dev_sigmazz[iGlobal]);
 		//Imaging muxz
-		// dev_dmuxz[iGlobal] += dev_sigmaxz[iGlobal]*(
-		// 												 // dvx_dz (-)
-		// 												 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
-		// 												 dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
-		// 												 dev_zCoeff[2]*(shared_c_vx[ixLocal][izLocal+2]-shared_c_vx[ixLocal][izLocal-3])+
-		// 												 dev_zCoeff[3]*(shared_c_vx[ixLocal][izLocal+3]-shared_c_vx[ixLocal][izLocal-4])+
-		// 												 // dvz_dx (-)
-		// 												 dev_xCoeff[0]*(shared_c_vz[ixLocal][izLocal]-shared_c_vz[ixLocal-1][izLocal])  +
-		// 												 dev_xCoeff[1]*(shared_c_vz[ixLocal+1][izLocal]-shared_c_vz[ixLocal-2][izLocal])+
-		// 												 dev_xCoeff[2]*(shared_c_vz[ixLocal+2][izLocal]-shared_c_vz[ixLocal-3][izLocal])+
-		// 												 dev_xCoeff[3]*(shared_c_vz[ixLocal+3][izLocal]-shared_c_vz[ixLocal-4][izLocal])
-		// 											);
+		if (dev_muxzDtw[iGlobal] > 0.){
+			dev_dmuxz[iGlobal] += dev_sigmaxz[iGlobal]*(
+															 // dvx_dz (-)
+															 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
+															 dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
+															 dev_zCoeff[2]*(shared_c_vx[ixLocal][izLocal+2]-shared_c_vx[ixLocal][izLocal-3])+
+															 dev_zCoeff[3]*(shared_c_vx[ixLocal][izLocal+3]-shared_c_vx[ixLocal][izLocal-4])+
+															 // dvz_dx (-)
+															 dev_xCoeff[0]*(shared_c_vz[ixLocal][izLocal]-shared_c_vz[ixLocal-1][izLocal])  +
+															 dev_xCoeff[1]*(shared_c_vz[ixLocal+1][izLocal]-shared_c_vz[ixLocal-2][izLocal])+
+															 dev_xCoeff[2]*(shared_c_vz[ixLocal+2][izLocal]-shared_c_vz[ixLocal-3][izLocal])+
+															 dev_xCoeff[3]*(shared_c_vz[ixLocal+3][izLocal]-shared_c_vz[ixLocal-4][izLocal])
+														)/dev_muxzDtw[iGlobal];
+		}
 
 		//Imaging muxy
-		// dev_dmuxy[iGlobal] += dev_sigmaxy[iGlobal]*(
-		// 												 // dvx_dy (-)
-		// 												 dev_yCoeff[0]*(shared_c_vx[ixLocal][izLocal]-dev_c_vx_y[3])  +
-		// 											   dev_yCoeff[1]*(dev_c_vx_y[4]-dev_c_vx_y[2])+
-		// 											   dev_yCoeff[2]*(dev_c_vx_y[5]-dev_c_vx_y[1])+
-		// 											   dev_yCoeff[3]*(dev_c_vx_y[6]-dev_c_vx_y[0])+
-		// 												 // dvy_dx (-)
-		// 												 dev_xCoeff[0]*(shared_c_vy[ixLocal][izLocal]-shared_c_vy[ixLocal-1][izLocal])  +
-		// 											   dev_xCoeff[1]*(shared_c_vy[ixLocal+1][izLocal]-shared_c_vy[ixLocal-2][izLocal])+
-		// 											   dev_xCoeff[2]*(shared_c_vy[ixLocal+2][izLocal]-shared_c_vy[ixLocal-3][izLocal])+
-		// 											   dev_xCoeff[3]*(shared_c_vy[ixLocal+3][izLocal]-shared_c_vy[ixLocal-4][izLocal])
-		// 											);
+		if (dev_muxyDtw[iGlobal] > 0.){
+			dev_dmuxy[iGlobal] += dev_sigmaxy[iGlobal]*(
+															 // dvx_dy (-)
+															 dev_yCoeff[0]*(shared_c_vx[ixLocal][izLocal]-dev_c_vx_y[3])  +
+														   dev_yCoeff[1]*(dev_c_vx_y[4]-dev_c_vx_y[2])+
+														   dev_yCoeff[2]*(dev_c_vx_y[5]-dev_c_vx_y[1])+
+														   dev_yCoeff[3]*(dev_c_vx_y[6]-dev_c_vx_y[0])+
+															 // dvy_dx (-)
+															 dev_xCoeff[0]*(shared_c_vy[ixLocal][izLocal]-shared_c_vy[ixLocal-1][izLocal])  +
+														   dev_xCoeff[1]*(shared_c_vy[ixLocal+1][izLocal]-shared_c_vy[ixLocal-2][izLocal])+
+														   dev_xCoeff[2]*(shared_c_vy[ixLocal+2][izLocal]-shared_c_vy[ixLocal-3][izLocal])+
+														   dev_xCoeff[3]*(shared_c_vy[ixLocal+3][izLocal]-shared_c_vy[ixLocal-4][izLocal])
+														)/dev_muxyDtw[iGlobal];
+		}
 
 		//Imaging muyz
-		// dev_dmuyz[iGlobal] += dev_sigmayz[iGlobal]*(
-		// 												 // dvx_dz (-)
-		// 												 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
-		// 											   dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
-		// 											   dev_zCoeff[2]*(shared_c_vx[ixLocal][izLocal+2]-shared_c_vx[ixLocal][izLocal-3])+
-		// 											   dev_zCoeff[3]*(shared_c_vx[ixLocal][izLocal+3]-shared_c_vx[ixLocal][izLocal-4])+
-		// 												 // dvz_dx (-)
-		// 												 dev_xCoeff[0]*(shared_c_vz[ixLocal][izLocal]-shared_c_vz[ixLocal-1][izLocal])  +
-		// 											   dev_xCoeff[1]*(shared_c_vz[ixLocal+1][izLocal]-shared_c_vz[ixLocal-2][izLocal])+
-		// 											   dev_xCoeff[2]*(shared_c_vz[ixLocal+2][izLocal]-shared_c_vz[ixLocal-3][izLocal])+
-		// 											   dev_xCoeff[3]*(shared_c_vz[ixLocal+3][izLocal]-shared_c_vz[ixLocal-4][izLocal])
-		// 											);
-
+		if (dev_muyzDtw[iGlobal] > 0.){
+		dev_dmuyz[iGlobal] += dev_sigmayz[iGlobal]*(
+														 // dvx_dz (-)
+														 dev_zCoeff[0]*(shared_c_vx[ixLocal][izLocal]-shared_c_vx[ixLocal][izLocal-1])  +
+													   dev_zCoeff[1]*(shared_c_vx[ixLocal][izLocal+1]-shared_c_vx[ixLocal][izLocal-2])+
+													   dev_zCoeff[2]*(shared_c_vx[ixLocal][izLocal+2]-shared_c_vx[ixLocal][izLocal-3])+
+													   dev_zCoeff[3]*(shared_c_vx[ixLocal][izLocal+3]-shared_c_vx[ixLocal][izLocal-4])+
+														 // dvz_dx (-)
+														 dev_xCoeff[0]*(shared_c_vz[ixLocal][izLocal]-shared_c_vz[ixLocal-1][izLocal])  +
+													   dev_xCoeff[1]*(shared_c_vz[ixLocal+1][izLocal]-shared_c_vz[ixLocal-2][izLocal])+
+													   dev_xCoeff[2]*(shared_c_vz[ixLocal+2][izLocal]-shared_c_vz[ixLocal-3][izLocal])+
+													   dev_xCoeff[3]*(shared_c_vz[ixLocal+3][izLocal]-shared_c_vz[ixLocal-4][izLocal])
+													)/dev_muyzDtw[iGlobal];
+		}
 		// Move forward one grid point in the y-direction
 		iGlobal += yStride;
 
