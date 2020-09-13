@@ -774,7 +774,7 @@ void SecondarySourceInitializeOnGpu_3D(long long nModel, int iGpu){
 	cuda_call(cudaMemset(dev_ssVxLeft[iGpu], 0, nModel*sizeof(double)));
 	cuda_call(cudaMemset(dev_ssVxRight[iGpu], 0, nModel*sizeof(double)));
 	cuda_call(cudaMemset(dev_ssVyLeft[iGpu], 0, nModel*sizeof(double)));
-	cuda_call(cudaMemset(dev_ssVzRight[iGpu], 0, nModel*sizeof(double)));
+	cuda_call(cudaMemset(dev_ssVyRight[iGpu], 0, nModel*sizeof(double)));
 	cuda_call(cudaMemset(dev_ssVzLeft[iGpu], 0, nModel*sizeof(double)));
 	cuda_call(cudaMemset(dev_ssVzRight[iGpu], 0, nModel*sizeof(double)));
 	cuda_call(cudaMemset(dev_ssSigmaxxLeft[iGpu], 0, nModel*sizeof(double)));
@@ -1246,10 +1246,6 @@ void BornElasticFwdGpu_3D(double *sourceRegDts_vx, double *sourceRegDts_vy, doub
 			switchPointers_3D(iGpu);
 
 		}
-		// std::cout << "its = " << its << std::endl;
-		// cuda_call(cudaMemcpy(tmpSlice, dev_p0_vx[iGpu], nModel*sizeof(double), cudaMemcpyDeviceToHost));
-		// std::cout << "Min value pLeft = " << *std::min_element(tmpSlice,tmpSlice+nModel) << std::endl;
-		// std::cout << "Max value pLeft = " << *std::max_element(tmpSlice,tmpSlice+nModel) << std::endl;
 
 		// Switch pointers for secondary source and setting right slices to zero
 		switchPointersSecondarySource_3D(iGpu);

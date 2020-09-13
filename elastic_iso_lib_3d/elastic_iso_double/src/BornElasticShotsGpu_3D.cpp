@@ -181,44 +181,41 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
 		long long nModel = nx;
 		nModel *= ny * nz;
 
-
-		modelSlice->scale(0.0); //DEBUG
-
     //Density perturbation
     //drho_x
     std::memcpy(temp_stag->getVals(), model->getVals(), nModel*sizeof(double));
-    // staggerXop->adjoint(false, temp_stag1, temp_stag);
-    // std::memcpy(modelSlice->getVals(), temp_stag1->getVals(), nModel*sizeof(double));
+    staggerXop->adjoint(false, temp_stag1, temp_stag);
+    std::memcpy(modelSlice->getVals(), temp_stag1->getVals(), nModel*sizeof(double));
 
     //drho_y
     staggerYop->adjoint(false, temp_stag1, temp_stag);
     std::memcpy(modelSlice->getVals()+nModel, temp_stag1->getVals(), nModel*sizeof(double));
 
 		//drho_z
-    // staggerZop->adjoint(false, temp_stag1, temp_stag);
-    // std::memcpy(modelSlice->getVals()+2*nModel, temp_stag1->getVals(), nModel*sizeof(double));
+    staggerZop->adjoint(false, temp_stag1, temp_stag);
+    std::memcpy(modelSlice->getVals()+2*nModel, temp_stag1->getVals(), nModel*sizeof(double));
 
     //dlame
-    // std::memcpy(modelSlice->getVals()+3*nModel, model->getVals()+nModel, nModel*sizeof(double) );
+    std::memcpy(modelSlice->getVals()+3*nModel, model->getVals()+nModel, nModel*sizeof(double) );
 
     //Shear modulus perturbations
     //dmu
-    // std::memcpy(modelSlice->getVals()+4*nModel, model->getVals()+2*nModel, nModel*sizeof(double) );
+    std::memcpy(modelSlice->getVals()+4*nModel, model->getVals()+2*nModel, nModel*sizeof(double) );
     //dmu_xz
-    // std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
-    // staggerXop->adjoint(false, temp_stag1, temp_stag);
-    // staggerZop->adjoint(false, temp_stag, temp_stag1);
-    // std::memcpy(modelSlice->getVals()+5*nModel, temp_stag->getVals(), nModel*sizeof(double) );
+    std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
+    staggerXop->adjoint(false, temp_stag1, temp_stag);
+    staggerZop->adjoint(false, temp_stag, temp_stag1);
+    std::memcpy(modelSlice->getVals()+5*nModel, temp_stag->getVals(), nModel*sizeof(double) );
 		//dmu_xy
-    // std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
-    // staggerXop->adjoint(false, temp_stag1, temp_stag);
-    // staggerYop->adjoint(false, temp_stag, temp_stag1);
-    // std::memcpy(modelSlice->getVals()+6*nModel, temp_stag->getVals(), nModel*sizeof(double) );
+    std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
+    staggerXop->adjoint(false, temp_stag1, temp_stag);
+    staggerYop->adjoint(false, temp_stag, temp_stag1);
+    std::memcpy(modelSlice->getVals()+6*nModel, temp_stag->getVals(), nModel*sizeof(double) );
 		//dmu_yz
-    // std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
-    // staggerYop->adjoint(false, temp_stag1, temp_stag);
-    // staggerZop->adjoint(false, temp_stag, temp_stag1);
-    // std::memcpy(modelSlice->getVals()+7*nModel, temp_stag->getVals(), nModel*sizeof(double) );
+    std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
+    staggerYop->adjoint(false, temp_stag1, temp_stag);
+    staggerZop->adjoint(false, temp_stag, temp_stag1);
+    std::memcpy(modelSlice->getVals()+7*nModel, temp_stag->getVals(), nModel*sizeof(double) );
 
 		//Scaling of the perturbations
     #pragma omp for collapse(3)
@@ -268,8 +265,11 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
   	  int iGpuId = _gpuList[iGpu];
 
       // Set acquisition geometry
-  	  if ( (constantRecGeom == 1) && (constantSrcSignal == 1) || (constantRecGeom == 1) && (constantSrcSignal == 0) ) {
+			if ( (constantRecGeom == 1) && (constantSrcSignal == 1)) {
           BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+  	  }
+  	  if ((constantRecGeom == 1) && (constantSrcSignal == 0) ) {
+          BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iExp], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
   	  }
   	  if ( (constantRecGeom == 0) && (constantSrcSignal == 1) ) {
           BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
@@ -368,8 +368,11 @@ void BornElasticShotsGpu_3D::adjoint(const bool add, const std::shared_ptr<doubl
 			// Copy data slice
 	    memcpy(dataSlicesVector[iGpu]->getVals(), &(data->getVals()[iExp*dataLength]), sizeof(double)*dataLength);
 			// Set acquisition geometry
-  	  if ( (constantRecGeom == 1) && (constantSrcSignal == 1) || (constantRecGeom == 1) && (constantSrcSignal == 0) ) {
+			if ( (constantRecGeom == 1) && (constantSrcSignal == 1)) {
           BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+  	  }
+  	  if ((constantRecGeom == 1) && (constantSrcSignal == 0) ) {
+          BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iExp], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
   	  }
   	  if ( (constantRecGeom == 0) && (constantSrcSignal == 1) ) {
           BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
@@ -383,8 +386,6 @@ void BornElasticShotsGpu_3D::adjoint(const bool add, const std::shared_ptr<doubl
 
 			//Launch modeling
       BornObjectVector[iGpu]->adjoint(true, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
-
-			std::cout << "modelSlicesVector[iGpu]->max() = " << modelSlicesVector[iGpu]->max() << std::endl;
 
 		}
 
@@ -440,40 +441,39 @@ void BornElasticShotsGpu_3D::adjoint(const bool add, const std::shared_ptr<doubl
 		//Density perturbation unstaggering
     //drho_x
     std::memcpy(temp_stag->getVals(), model->getVals(), nModel*sizeof(double));
-		// std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals(), nModel*sizeof(double) );
-    // staggerXop->forward(true, temp_stag1, temp_stag);
+		std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals(), nModel*sizeof(double) );
+    staggerXop->forward(true, temp_stag1, temp_stag);
 
     //drho_y
 		std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+nModel, nModel*sizeof(double) );
-		// staggerYop->forward(true, temp_stag1, temp_stag);
-    staggerYop->forward(true, temp_stag1, temp_stag); //DEBUG
+		staggerYop->forward(true, temp_stag1, temp_stag);
 
 		//drho_z
-		// std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+2*nModel, nModel*sizeof(double) );
-    // staggerZop->forward(true, temp_stag1, temp_stag);
+		std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+2*nModel, nModel*sizeof(double) );
+    staggerZop->forward(true, temp_stag1, temp_stag);
 		std::memcpy(model->getVals(), temp_stag->getVals(), nModel*sizeof(double) );
 
     //dmu_xz
-    // std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+5*nModel, nModel*sizeof(double) );
-    // staggerZop->forward(false, temp_stag1, temp_stag);
-    // staggerXop->forward(false, temp_stag, temp_stag2);
+    std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+5*nModel, nModel*sizeof(double) );
+    staggerZop->forward(false, temp_stag1, temp_stag);
+    staggerXop->forward(false, temp_stag, temp_stag2);
 		//dmu_xy
-    // std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+6*nModel, nModel*sizeof(double) );
-    // staggerYop->forward(false, temp_stag1, temp_stag);
-    // staggerXop->forward(true, temp_stag, temp_stag2);
+    std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+6*nModel, nModel*sizeof(double) );
+    staggerYop->forward(false, temp_stag1, temp_stag);
+    staggerXop->forward(true, temp_stag, temp_stag2);
 		//dmu_yz
-    // std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+7*nModel, nModel*sizeof(double) );
-    // staggerZop->forward(false, temp_stag1, temp_stag);
-    // staggerYop->forward(true, temp_stag, temp_stag2);
+    std::memcpy(temp_stag1->getVals(), modelSlicesVector[0]->getVals()+7*nModel, nModel*sizeof(double) );
+    staggerZop->forward(false, temp_stag1, temp_stag);
+    staggerYop->forward(true, temp_stag, temp_stag2);
 
 		#pragma omp for collapse(3)
 		for (int iy = 0; iy < ny; iy++){
     	for (int ix = 0; ix < nx; ix++){
     		for (int iz = 0; iz < nz; iz++) {
 					//D_LAME
-					// (*model->_mat)[1][iy][ix][iz] += (*modelSlicesVector[0]->_mat)[3][iy][ix][iz];
+					(*model->_mat)[1][iy][ix][iz] += (*modelSlicesVector[0]->_mat)[3][iy][ix][iz];
 					//D_MU
-					// (*model->_mat)[2][iy][ix][iz] += (*modelSlicesVector[0]->_mat)[4][iy][ix][iz] + (*temp_stag2->_mat)[iy][ix][iz];
+					(*model->_mat)[2][iy][ix][iz] += (*modelSlicesVector[0]->_mat)[4][iy][ix][iz] + (*temp_stag2->_mat)[iy][ix][iz];
     		}
     	}
 		}

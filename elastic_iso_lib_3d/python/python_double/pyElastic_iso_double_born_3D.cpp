@@ -23,6 +23,8 @@ PYBIND11_MODULE(pyElastic_iso_double_born_3D, clsGeneric) {
 
 			.def("setBackground", (void (BornElasticShotsGpu_3D::*)(std::shared_ptr<SEP::double4DReg>)) &BornElasticShotsGpu_3D::setBackground, "setBackground")
 
+			.def("dotTest",(bool (BornElasticShotsGpu_3D::*)(const bool, const double)) &BornElasticShotsGpu_3D::dotTest,"Dot-Product Test")
+
 			;
 
 }
