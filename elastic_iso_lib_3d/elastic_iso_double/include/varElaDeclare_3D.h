@@ -81,7 +81,6 @@
 
 	int host_nts;
 	double host_dts;
-	double host_dtw;
 	int host_ntw;
 	int host_sub;
 	int host_minPad;
