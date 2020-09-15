@@ -202,3 +202,48 @@ __global__ void dampCosineEdgedomDec_3D(double *dev_p1_vx, double *dev_p2_vx, do
 /****************************************************************************************/
 /******************************** Wavefield Interpolation *******************************/
 /****************************************************************************************/
+__global__ void interpWavefieldVxVyVzdomDec_3D(double *dev_wavefieldVx_left, double *dev_wavefieldVx_right, double *dev_wavefieldVy_left, double *dev_wavefieldVy_right, double *dev_wavefieldVz_left, double *dev_wavefieldVz_right, double *dev_timeSliceVx, double *dev_timeSliceVy, double *dev_timeSliceVz, int nx, int yStart, int yEnd, int nz, int it2) {
+
+    long long izGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Global z-coordinate
+    long long ixGlobal = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // Global x-coordinate
+
+		// Number of elements in one y-slice
+		long long yStride = nz * nx;
+
+		// Global index of the first element at which we are going to compute the Laplacian
+		long long iGlobal = yStart * yStride + nz * ixGlobal + izGlobal;
+
+		// Loop over y
+		for (long long iy=yStart; iy<yEnd; iy++){
+			// Interpolating Vx and Vz
+	    dev_wavefieldVx_left[iGlobal] += dev_timeSliceVx[iGlobal] * dev_timeInterpFilter[it2]; // its
+	    dev_wavefieldVx_right[iGlobal] += dev_timeSliceVx[iGlobal] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2]; // its+1
+			dev_wavefieldVy_left[iGlobal] += dev_timeSliceVy[iGlobal] * dev_timeInterpFilter[it2]; // its
+	    dev_wavefieldVy_right[iGlobal] += dev_timeSliceVy[iGlobal] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2]; // its+1
+			dev_wavefieldVz_left[iGlobal] += dev_timeSliceVz[iGlobal] * dev_timeInterpFilter[it2]; // its
+	    dev_wavefieldVz_right[iGlobal] += dev_timeSliceVz[iGlobal] * dev_timeInterpFilter[dev_hTimeInterpFilter+it2]; // its+1
+
+			// Move forward one grid point in the y-direction
+			iGlobal += yStride;
+		}
+
+}
+/* Interpolate and inject secondary source at fine time-sampling */
+__global__ void injectSecondarySourcedomDec_3D(double *dev_ssLeft, double *dev_ssRight, double *dev_p0, int nx, int yStart, int yEnd, int nz, int indexFilter){
+	long long izGlobal = FAT + blockIdx.x * BLOCK_SIZE + threadIdx.x; // Global z-coordinate
+	long long ixGlobal = FAT + blockIdx.y * BLOCK_SIZE + threadIdx.y; // Global x-coordinate
+
+	// Number of elements in one y-slice
+	long long yStride = nz * nx;
+
+	// Global index of the first element at which we are going to compute the Laplacian
+	long long iGlobal = yStart * yStride + nz * ixGlobal + izGlobal;
+
+	// Loop over y
+	for (long long iy=yStart; iy<yEnd; iy++){
+	  dev_p0[iGlobal] += dev_ssLeft[iGlobal] * dev_timeInterpFilter[indexFilter] + dev_ssRight[iGlobal] * dev_timeInterpFilter[dev_hTimeInterpFilter+indexFilter];
+
+		// Move forward one grid point in the y-direction
+		iGlobal += yStride;
+	}
+}
