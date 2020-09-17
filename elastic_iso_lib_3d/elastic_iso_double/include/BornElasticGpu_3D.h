@@ -28,6 +28,8 @@ class BornElasticGpu_3D : public seismicElasticOperator3D<SEP::double4DReg, SEP:
 	public:
 	  	//! Constructor.
 		BornElasticGpu_3D(std::shared_ptr<fdParamElastic_3D> fdParamElastic, std::shared_ptr<paramObj> par, int nGpu, int iGpu, int iGpuId, int iGpuAlloc);
+		//! Constructor for domain decomposition
+		BornElasticGpu_3D(std::shared_ptr<fdParamElastic_3D> fdParamElastic, std::shared_ptr<paramObj> par, int nGpu, std::vector<int> gpuList, int iGpuAlloc, std::vector<int> ny_domDec);
 
 		//! Mutators.
 		void setAllWavefields_3D(int wavefieldFlag);

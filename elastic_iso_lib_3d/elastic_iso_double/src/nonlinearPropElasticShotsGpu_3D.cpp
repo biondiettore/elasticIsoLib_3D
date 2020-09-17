@@ -215,11 +215,6 @@ void nonlinearPropElasticShotsGpu_3D::forward(const bool add, const std::shared_
 
 		}
 
-		// Deallocate memory on device
-		for (int iGpu=0; iGpu<_nGpu; iGpu++){
-			deallocateNonlinearElasticGpu_3D(iGpu,_gpuList[iGpu]);
-		}
-
 	} else {
 		// Using domain decomposition
 		// Variable declaration
@@ -292,11 +287,11 @@ void nonlinearPropElasticShotsGpu_3D::forward(const bool add, const std::shared_
 
 		}
 
-		// Deallocate memory on device
-		for (int iGpu=0; iGpu<_nGpu; iGpu++){
-			deallocateNonlinearElasticGpu_3D(iGpu,_gpuList[iGpu]);
-		}
+	}
 
+	// Deallocate memory on device
+	for (int iGpu=0; iGpu<_nGpu; iGpu++){
+		deallocateNonlinearElasticGpu_3D(iGpu,_gpuList[iGpu]);
 	}
 }
 

@@ -275,7 +275,7 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
           BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
   	  }
   	  if ( (constantRecGeom == 0) && (constantSrcSignal == 0) ) {
-          BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iGpu], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+          BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iExp], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
   	  }
 
       // Set GPU number for propagator object
@@ -296,13 +296,141 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
 
 		}
 
-		// Deallocate memory on device
-    for (int iGpu=0; iGpu<_nGpu; iGpu++){
-      deallocateBornElasticGpu_3D(iGpu,_gpuList[iGpu]);
-    }
-
 	} else {
 
+		// Using domain decomposition
+		int constantSrcSignal, constantRecGeom;
+
+		// Check whether we use the same source signals for all shots
+    if (_sourcesSignalsVector.size() == 1) {constantSrcSignal = 1;}
+    else {constantSrcSignal=0;}
+
+    // Check if we have constant receiver geometry. If _receiversVectorCenterGrid size==1 then all receiver vectors should be as well.
+    if (_receiversVectorCenterGrid.size() == 1) {constantRecGeom = 1;}
+    else {constantRecGeom=0;}
+
+		// Create vectors for each GPU
+    std::shared_ptr<SEP::hypercube> hyperModelSlice(new hypercube(model->getHyper()->getAxis(1), model->getHyper()->getAxis(2), model->getHyper()->getAxis(3), SEP::axis(8))); //This model slice contains the staggered and scaled model perturbations (drhox, drhoy, drhoz, dlame, dmu, dmuxz, dmuxy, dmuyz)
+    std::shared_ptr<SEP::hypercube> hyperDataSlice(new hypercube(data->getHyper()->getAxis(1), data->getHyper()->getAxis(2), data->getHyper()->getAxis(3)));
+		// Model slice
+		std::shared_ptr<SEP::double4DReg> modelSlice(new SEP::double4DReg(hyperModelSlice));
+		// Data slice
+		std::shared_ptr<SEP::double3DReg> dataSlice(new SEP::double3DReg(hyperDataSlice));
+
+		//Staggering and scaling input model perturbations
+    std::shared_ptr<double3DReg> temp_stag(new double3DReg(_elasticParam->getHyper()->getAxis(1), _elasticParam->getHyper()->getAxis(2), _elasticParam->getHyper()->getAxis(3)));
+    std::shared_ptr<double3DReg> temp_stag1(new double3DReg(_elasticParam->getHyper()->getAxis(1), _elasticParam->getHyper()->getAxis(2), _elasticParam->getHyper()->getAxis(3)));
+
+		//stagger 3d density, mu
+    std::shared_ptr<staggerX> staggerXop(new staggerX(temp_stag,temp_stag1));
+		std::shared_ptr<staggerY> staggerYop(new staggerY(temp_stag,temp_stag1));
+    std::shared_ptr<staggerZ> staggerZop(new staggerZ(temp_stag,temp_stag1));
+
+		// Model size
+		int nx = _fdParamElastic->_nx;
+		int ny = _fdParamElastic->_ny;
+		int nz = _fdParamElastic->_nz;
+		long long nModel = nx;
+		nModel *= ny * nz;
+
+    //Density perturbation
+    //drho_x
+    std::memcpy(temp_stag->getVals(), model->getVals(), nModel*sizeof(double));
+    staggerXop->adjoint(false, temp_stag1, temp_stag);
+    std::memcpy(modelSlice->getVals(), temp_stag1->getVals(), nModel*sizeof(double));
+
+    //drho_y
+    staggerYop->adjoint(false, temp_stag1, temp_stag);
+    std::memcpy(modelSlice->getVals()+nModel, temp_stag1->getVals(), nModel*sizeof(double));
+
+		//drho_z
+    staggerZop->adjoint(false, temp_stag1, temp_stag);
+    std::memcpy(modelSlice->getVals()+2*nModel, temp_stag1->getVals(), nModel*sizeof(double));
+
+    //dlame
+    std::memcpy(modelSlice->getVals()+3*nModel, model->getVals()+nModel, nModel*sizeof(double) );
+
+    //Shear modulus perturbations
+    //dmu
+    std::memcpy(modelSlice->getVals()+4*nModel, model->getVals()+2*nModel, nModel*sizeof(double) );
+    //dmu_xz
+    std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
+    staggerXop->adjoint(false, temp_stag1, temp_stag);
+    staggerZop->adjoint(false, temp_stag, temp_stag1);
+    std::memcpy(modelSlice->getVals()+5*nModel, temp_stag->getVals(), nModel*sizeof(double) );
+		//dmu_xy
+    std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
+    staggerXop->adjoint(false, temp_stag1, temp_stag);
+    staggerYop->adjoint(false, temp_stag, temp_stag1);
+    std::memcpy(modelSlice->getVals()+6*nModel, temp_stag->getVals(), nModel*sizeof(double) );
+		//dmu_yz
+    std::memcpy(temp_stag->getVals(), model->getVals()+2*nModel, nModel*sizeof(double) );
+    staggerYop->adjoint(false, temp_stag1, temp_stag);
+    staggerZop->adjoint(false, temp_stag, temp_stag1);
+    std::memcpy(modelSlice->getVals()+7*nModel, temp_stag->getVals(), nModel*sizeof(double) );
+
+		//Scaling of the perturbations
+    #pragma omp for collapse(3)
+		for (long long iy = 0; iy < ny; iy++){
+    	for (long long ix = 0; ix < nx; ix++){
+    		for (long long iz = 0; iz < nz; iz++) {
+    			(*modelSlice->_mat)[0][iy][ix][iz] *= (*_fdParamElastic->_rhoxDtwReg->_mat)[iy][ix][iz];
+					(*modelSlice->_mat)[1][iy][ix][iz] *= (*_fdParamElastic->_rhoyDtwReg->_mat)[iy][ix][iz];
+    			(*modelSlice->_mat)[2][iy][ix][iz] *= (*_fdParamElastic->_rhozDtwReg->_mat)[iy][ix][iz];
+	    		(*modelSlice->_mat)[3][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+	    		(*modelSlice->_mat)[4][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+					(*modelSlice->_mat)[5][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+	    		(*modelSlice->_mat)[6][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+					(*modelSlice->_mat)[7][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw;
+    		}
+    	}
+		}
+
+		// Born object
+		std::shared_ptr<BornElasticGpu_3D> BornGpuObject(new BornElasticGpu_3D(_fdParamElastic, _par, _nGpu, _gpuList, _iGpuAlloc, _ny_domDec));
+
+		// Display finite-difference parameters info
+		if (_info == 1) {
+			BornGpuObject->getFdParam_3D()->getInfo_3D();
+		}
+
+		//will loop over number of experiments
+		for (int iExp=0; iExp<_nExp; iExp++){
+
+			// Set acquisition geometry
+			if ( (constantRecGeom == 1) && (constantSrcSignal == 1)) {
+          BornGpuObject->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlice, dataSlice);
+  	  }
+  	  if ((constantRecGeom == 1) && (constantSrcSignal == 0) ) {
+          BornGpuObject->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iExp], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlice, dataSlice);
+  	  }
+  	  if ( (constantRecGeom == 0) && (constantSrcSignal == 1) ) {
+          BornGpuObject->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlice, dataSlice);
+  	  }
+  	  if ( (constantRecGeom == 0) && (constantSrcSignal == 0) ) {
+          BornGpuObject->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iExp], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlice, dataSlice);
+  	  }
+
+      //Launch modeling
+      BornGpuObject->forward(false, modelSlice, dataSlice);
+
+      // Store dataSlice into data
+      #pragma omp parallel for collapse(3)
+      for (int iwc=0; iwc<hyperDataSlice->getAxis(3).n; iwc++){ // wavefield component
+        for (int iReceiver=0; iReceiver<hyperDataSlice->getAxis(2).n; iReceiver++){
+          for (int its=0; its<hyperDataSlice->getAxis(1).n; its++){
+            (*data->_mat)[iExp][iwc][iReceiver][its] += (*dataSlice->_mat)[iwc][iReceiver][its];
+          }
+        }
+      }
+
+		}
+
+	}
+
+	// Deallocate memory on device
+	for (int iGpu=0; iGpu<_nGpu; iGpu++){
+		deallocateBornElasticGpu_3D(iGpu,_gpuList[iGpu]);
 	}
 }
 
@@ -378,7 +506,7 @@ void BornElasticShotsGpu_3D::adjoint(const bool add, const std::shared_ptr<doubl
           BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
   	  }
   	  if ( (constantRecGeom == 0) && (constantSrcSignal == 0) ) {
-          BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iGpu], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
+          BornObjectVector[iGpu]->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iExp], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
   	  }
 
 			// Set GPU number for Born object
@@ -478,12 +606,142 @@ void BornElasticShotsGpu_3D::adjoint(const bool add, const std::shared_ptr<doubl
     	}
 		}
 
-		// Deallocate memory on device
-		for (int iGpu=0; iGpu<_nGpu; iGpu++){
-			deallocateBornElasticGpu_3D(iGpu,_gpuList[iGpu]);
+	} else {
+		// Using domain decomposition
+		int constantSrcSignal, constantRecGeom;
+
+		// Check whether we use the same source signals for all shots
+    if (_sourcesSignalsVector.size() == 1) {constantSrcSignal = 1;}
+    else {constantSrcSignal=0;}
+
+    // Check if we have constant receiver geometry. If _receiversVectorCenterGrid size==1 then all receiver vectors should be as well.
+    if (_receiversVectorCenterGrid.size() == 1) {constantRecGeom = 1;}
+    else {constantRecGeom=0;}
+
+		// Create vectors for each GPU
+    std::shared_ptr<SEP::hypercube> hyperModelSlice(new hypercube(model->getHyper()->getAxis(1), model->getHyper()->getAxis(2), model->getHyper()->getAxis(3), SEP::axis(8))); //This model slice contains the staggered and scaled model perturbations (drhox, drhoy, drhoz, dlame, dmu, dmuxz, dmuxy, dmuyz)
+    std::shared_ptr<SEP::hypercube> hyperDataSlice(new hypercube(data->getHyper()->getAxis(1), data->getHyper()->getAxis(2), data->getHyper()->getAxis(3)));
+		// Model slice
+		std::shared_ptr<SEP::double4DReg> modelSlice(new SEP::double4DReg(hyperModelSlice));
+		modelSlice->scale(0.0);
+		// Data slice
+		std::shared_ptr<SEP::double3DReg> dataSlice(new SEP::double3DReg(hyperDataSlice));
+
+		// Born object
+		std::shared_ptr<BornElasticGpu_3D> BornGpuObject(new BornElasticGpu_3D(_fdParamElastic, _par, _nGpu, _gpuList, _iGpuAlloc, _ny_domDec));
+
+		// Display finite-difference parameters info
+		if (_info == 1) {
+			BornGpuObject->getFdParam_3D()->getInfo_3D();
 		}
 
-	} else {
+		//will loop over number of experiments
+		for (int iExp=0; iExp<_nExp; iExp++){
 
+			// Copy model slice
+			long long dataLength = hyperDataSlice->getAxis(1).n*hyperDataSlice->getAxis(2).n;
+			dataLength *= hyperDataSlice->getAxis(3).n;
+			// Copy data slice
+	    memcpy(dataSlice->getVals(), &(data->getVals()[iExp*dataLength]), sizeof(double)*dataLength);
+			// Set acquisition geometry
+			if ( (constantRecGeom == 1) && (constantSrcSignal == 1)) {
+          BornGpuObject->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlice, dataSlice);
+  	  }
+  	  if ((constantRecGeom == 1) && (constantSrcSignal == 0) ) {
+          BornGpuObject->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iExp], _receiversVectorCenterGrid[0], _receiversVectorXGrid[0], _receiversVectorYGrid[0], _receiversVectorZGrid[0], _receiversVectorXZGrid[0], _receiversVectorXYGrid[0], _receiversVectorYZGrid[0], modelSlice, dataSlice);
+  	  }
+  	  if ( (constantRecGeom == 0) && (constantSrcSignal == 1) ) {
+          BornGpuObject->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[0], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlice, dataSlice);
+  	  }
+  	  if ( (constantRecGeom == 0) && (constantSrcSignal == 0) ) {
+          BornGpuObject->setAcquisition_3D(_sourcesVectorCenterGrid[iExp], _sourcesVectorXGrid[iExp], _sourcesVectorYGrid[iExp], _sourcesVectorZGrid[iExp], _sourcesVectorXZGrid[iExp], _sourcesVectorXYGrid[iExp], _sourcesVectorYZGrid[iExp], _sourcesSignalsVector[iExp], _receiversVectorCenterGrid[iExp], _receiversVectorXGrid[iExp], _receiversVectorYGrid[iExp], _receiversVectorZGrid[iExp], _receiversVectorXZGrid[iExp], _receiversVectorXYGrid[iExp], _receiversVectorYZGrid[iExp], modelSlice, dataSlice);
+  	  }
+
+			//Launch modeling
+      BornGpuObject->adjoint(true, modelSlice, dataSlice);
+
+		}
+
+		// Model size
+		int nx = _fdParamElastic->_nx;
+		int ny = _fdParamElastic->_ny;
+		int nz = _fdParamElastic->_nz;
+		long long nModel = nx;
+		nModel *= ny * nz;
+
+
+		//Scaling of the perturbations
+    #pragma omp for collapse(3)
+		for (int iy = 0; iy < ny; iy++){
+    	for (int ix = 0; ix < nx; ix++){
+    		for (int iz = 0; iz < nz; iz++) {
+					(*modelSlice->_mat)[0][iy][ix][iz] *= (*_fdParamElastic->_rhoxDtwReg->_mat)[iy][ix][iz];
+					(*modelSlice->_mat)[1][iy][ix][iz] *= (*_fdParamElastic->_rhoyDtwReg->_mat)[iy][ix][iz];
+					(*modelSlice->_mat)[2][iy][ix][iz] *= (*_fdParamElastic->_rhozDtwReg->_mat)[iy][ix][iz];
+	    		(*modelSlice->_mat)[3][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw; //dlame
+	    		(*modelSlice->_mat)[4][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw; //dmu
+					(*modelSlice->_mat)[5][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw; //dmu_xz
+	    		(*modelSlice->_mat)[6][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw; //dmu_xy
+					(*modelSlice->_mat)[7][iy][ix][iz] *= 2.0*_fdParamElastic->_dtw; //dmu_yz
+    		}
+    	}
+		}
+
+
+		//Scaling and un-staggering input model perturbations
+    std::shared_ptr<double3DReg> temp_stag(new double3DReg(_elasticParam->getHyper()->getAxis(1), _elasticParam->getHyper()->getAxis(2), _elasticParam->getHyper()->getAxis(3)));
+    std::shared_ptr<double3DReg> temp_stag1(new double3DReg(_elasticParam->getHyper()->getAxis(1), _elasticParam->getHyper()->getAxis(2), _elasticParam->getHyper()->getAxis(3)));
+		std::shared_ptr<double3DReg> temp_stag2(new double3DReg(_elasticParam->getHyper()->getAxis(1), _elasticParam->getHyper()->getAxis(2), _elasticParam->getHyper()->getAxis(3)));
+
+		//unstagger 3d density, mu
+    std::shared_ptr<staggerX> staggerXop(new staggerX(temp_stag,temp_stag1));
+		std::shared_ptr<staggerY> staggerYop(new staggerY(temp_stag,temp_stag1));
+    std::shared_ptr<staggerZ> staggerZop(new staggerZ(temp_stag,temp_stag1));
+
+		//Density perturbation unstaggering
+    //drho_x
+    std::memcpy(temp_stag->getVals(), model->getVals(), nModel*sizeof(double));
+		std::memcpy(temp_stag1->getVals(), modelSlice->getVals(), nModel*sizeof(double) );
+    staggerXop->forward(true, temp_stag1, temp_stag);
+
+    //drho_y
+		std::memcpy(temp_stag1->getVals(), modelSlice->getVals()+nModel, nModel*sizeof(double) );
+		staggerYop->forward(true, temp_stag1, temp_stag);
+
+		//drho_z
+		std::memcpy(temp_stag1->getVals(), modelSlice->getVals()+2*nModel, nModel*sizeof(double) );
+    staggerZop->forward(true, temp_stag1, temp_stag);
+		std::memcpy(model->getVals(), temp_stag->getVals(), nModel*sizeof(double) );
+
+    //dmu_xz
+    std::memcpy(temp_stag1->getVals(), modelSlice->getVals()+5*nModel, nModel*sizeof(double) );
+    staggerZop->forward(false, temp_stag1, temp_stag);
+    staggerXop->forward(false, temp_stag, temp_stag2);
+		//dmu_xy
+    std::memcpy(temp_stag1->getVals(), modelSlice->getVals()+6*nModel, nModel*sizeof(double) );
+    staggerYop->forward(false, temp_stag1, temp_stag);
+    staggerXop->forward(true, temp_stag, temp_stag2);
+		//dmu_yz
+    std::memcpy(temp_stag1->getVals(), modelSlice->getVals()+7*nModel, nModel*sizeof(double) );
+    staggerZop->forward(false, temp_stag1, temp_stag);
+    staggerYop->forward(true, temp_stag, temp_stag2);
+
+		#pragma omp for collapse(3)
+		for (int iy = 0; iy < ny; iy++){
+    	for (int ix = 0; ix < nx; ix++){
+    		for (int iz = 0; iz < nz; iz++) {
+					//D_LAME
+					(*model->_mat)[1][iy][ix][iz] += (*modelSlice->_mat)[3][iy][ix][iz];
+					//D_MU
+					(*model->_mat)[2][iy][ix][iz] += (*modelSlice->_mat)[4][iy][ix][iz] + (*temp_stag2->_mat)[iy][ix][iz];
+    		}
+    	}
+		}
+
+	}
+
+	// Deallocate memory on device
+	for (int iGpu=0; iGpu<_nGpu; iGpu++){
+		deallocateBornElasticGpu_3D(iGpu,_gpuList[iGpu]);
 	}
 }

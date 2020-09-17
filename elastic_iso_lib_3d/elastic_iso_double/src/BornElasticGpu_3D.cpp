@@ -23,6 +23,33 @@ BornElasticGpu_3D::BornElasticGpu_3D(std::shared_ptr<fdParamElastic_3D> fdParamE
 	setAllWavefields_3D(0); // By default, do not record the scattered wavefields
 }
 
+BornElasticGpu_3D::BornElasticGpu_3D(std::shared_ptr<fdParamElastic_3D> fdParamElastic, std::shared_ptr<paramObj> par, int nGpu, std::vector<int> gpuList, int iGpuAlloc, std::vector<int> ny_domDec){
+
+	_fdParamElastic = fdParamElastic;
+	_nGpu = nGpu;
+	_gpuList = gpuList;
+	_ny_domDec = ny_domDec;
+	_saveWavefield = par->getInt("saveWavefield", 0);
+	_domDec = par->getInt("domDec", 0); //Flag to use domain decomposition or not
+	_freeSurface = par->getInt("freeSurface", 0); //Flag to use free surface boundary condition or not
+
+	long long yStride = _fdParamElastic->_nz * _fdParamElastic->_nx;
+	long long shift = 0;
+
+	for (int iGpu=0; iGpu<_nGpu; iGpu++){
+		// Initialize GPU
+		initBornElasticGpu_3D(_fdParamElastic->_dz, _fdParamElastic->_dx, _fdParamElastic->_dy, _fdParamElastic->_nz, _fdParamElastic->_nx, _fdParamElastic->_ny, _fdParamElastic->_nts, _fdParamElastic->_dts, _fdParamElastic->_sub, _fdParamElastic->_minPad, _fdParamElastic->_blockSize, _fdParamElastic->_alphaCos, _nGpu, _gpuList[iGpu], iGpuAlloc);
+
+		// Allocate on GPUs
+		allocateBornElasticGpu_3D(_fdParamElastic->_rhoxDtw+shift, _fdParamElastic->_rhoyDtw+shift, _fdParamElastic->_rhozDtw+shift, _fdParamElastic->_lamb2MuDtw+shift, _fdParamElastic->_lambDtw+shift, _fdParamElastic->_muxzDtw+shift, _fdParamElastic->_muxyDtw+shift, _fdParamElastic->_muyzDtw+shift, _fdParamElastic->_nx, _ny_domDec[iGpu], _fdParamElastic->_nz, iGpu, _gpuList[iGpu]);
+
+		//Shifting part of the model to allocate on the GPUs
+		//Going back by 2*fat since the overlap between domains
+		shift += yStride*(_ny_domDec[iGpu]-2*_fdParamElastic->_fat);
+	}
+	setAllWavefields_3D(0); // By default, do not record the scattered wavefields
+}
+
 
 bool BornElasticGpu_3D::checkParfileConsistency_3D(const std::shared_ptr<SEP::double4DReg> model, const std::shared_ptr<SEP::double3DReg> data) const{
 
@@ -275,7 +302,7 @@ void BornElasticGpu_3D::adjoint(const bool add, const std::shared_ptr<double4DRe
 	if (_domDec == 0){
 		BornElasticAdjGpu_3D(_sourceRegDtw_vx->getVals(), _sourceRegDtw_vy->getVals(), _sourceRegDtw_vz->getVals(), _sourceRegDtw_sigmaxx->getVals(), _sourceRegDtw_sigmayy->getVals(), _sourceRegDtw_sigmazz->getVals(), _sourceRegDtw_sigmaxz->getVals(), _sourceRegDtw_sigmaxy->getVals(), _sourceRegDtw_sigmayz->getVals(), dataRegDts_vx->getVals(), dataRegDts_vy->getVals(), dataRegDts_vz->getVals(), dataRegDts_sigmaxx->getVals(), dataRegDts_sigmayy->getVals(), dataRegDts_sigmazz->getVals(), dataRegDts_sigmaxz->getVals(), dataRegDts_sigmaxy->getVals(), dataRegDts_sigmayz->getVals(), _sourcesPositionRegCenterGrid, _nSourcesRegCenterGrid, _sourcesPositionRegXGrid, _nSourcesRegXGrid, _sourcesPositionRegYGrid, _nSourcesRegYGrid, _sourcesPositionRegZGrid, _nSourcesRegZGrid, _sourcesPositionRegXZGrid, _nSourcesRegXZGrid, _sourcesPositionRegXYGrid, _nSourcesRegXYGrid, _sourcesPositionRegYZGrid, _nSourcesRegYZGrid, _receiversPositionRegCenterGrid, _nReceiversRegCenterGrid, _receiversPositionRegXGrid, _nReceiversRegXGrid, _receiversPositionRegYGrid, _nReceiversRegYGrid, _receiversPositionRegZGrid, _nReceiversRegZGrid, _receiversPositionRegXZGrid, _nReceiversRegXZGrid, _receiversPositionRegXYGrid, _nReceiversRegXYGrid, _receiversPositionRegYZGrid, _nReceiversRegYZGrid, drhox_in, drhoy_in, drhoz_in, dlame_in, dmu_in, dmuxz_in, dmuxy_in, dmuyz_in, nx, ny, nz, _iGpu, _iGpuId);
 	} else {
-		throw std::logic_error( "Error! Born adjoint with domain decomposition not implemented yet!" );
+		BornElasticAdjGpudomDec_3D(_sourceRegDtw_vx->getVals(), _sourceRegDtw_vy->getVals(), _sourceRegDtw_vz->getVals(), _sourceRegDtw_sigmaxx->getVals(), _sourceRegDtw_sigmayy->getVals(), _sourceRegDtw_sigmazz->getVals(), _sourceRegDtw_sigmaxz->getVals(), _sourceRegDtw_sigmaxy->getVals(), _sourceRegDtw_sigmayz->getVals(), dataRegDts_vx->getVals(), dataRegDts_vy->getVals(), dataRegDts_vz->getVals(), dataRegDts_sigmaxx->getVals(), dataRegDts_sigmayy->getVals(), dataRegDts_sigmazz->getVals(), dataRegDts_sigmaxz->getVals(), dataRegDts_sigmaxy->getVals(), dataRegDts_sigmayz->getVals(), _sourcesPositionRegCenterGrid, _nSourcesRegCenterGrid, _sourcesPositionRegXGrid, _nSourcesRegXGrid, _sourcesPositionRegYGrid, _nSourcesRegYGrid, _sourcesPositionRegZGrid, _nSourcesRegZGrid, _sourcesPositionRegXZGrid, _nSourcesRegXZGrid, _sourcesPositionRegXYGrid, _nSourcesRegXYGrid, _sourcesPositionRegYZGrid, _nSourcesRegYZGrid, _receiversPositionRegCenterGrid, _nReceiversRegCenterGrid, _receiversPositionRegXGrid, _nReceiversRegXGrid, _receiversPositionRegYGrid, _nReceiversRegYGrid, _receiversPositionRegZGrid, _nReceiversRegZGrid, _receiversPositionRegXZGrid, _nReceiversRegXZGrid, _receiversPositionRegXYGrid, _nReceiversRegXYGrid, _receiversPositionRegYZGrid, _nReceiversRegYZGrid, drhox_in, drhoy_in, drhoz_in, dlame_in, dmu_in, dmuxz_in, dmuxy_in, dmuyz_in, nx, ny, nz, _ny_domDec, _gpuList);
 	}
 
 }
