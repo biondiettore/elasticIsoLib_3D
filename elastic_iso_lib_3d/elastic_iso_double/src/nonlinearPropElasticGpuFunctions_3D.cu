@@ -1432,7 +1432,7 @@ void propElasticAdjGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 	//Define separate streams for overlapping communication
   cudaStream_t haloStream[nGpu], bodyStream[nGpu];
 
-	//Allocating temporary data arrays
+	//Allocating temporary model arrays
 	double* modelRegDts_vxTmp = new double[nSourcesRegXGrid*host_nts];
 	double* modelRegDts_vyTmp = new double[nSourcesRegYGrid*host_nts];
 	double* modelRegDts_vzTmp = new double[nSourcesRegZGrid*host_nts];
@@ -1653,7 +1653,7 @@ void propElasticAdjGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 
 	}
 
-	//Deleting temporary data arrays
+	//Deleting temporary model arrays
 	delete[] modelRegDts_vxTmp;
 	delete[] modelRegDts_vyTmp;
 	delete[] modelRegDts_vzTmp;
