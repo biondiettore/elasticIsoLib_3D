@@ -1492,7 +1492,7 @@ void propElasticAdjGpudomDec_3D(double *modelRegDts_vx, double *modelRegDts_vy, 
 	for (int its = host_nts-2; its > -1; its--){
 			for (int it2 = host_sub-1; it2 > -1; it2--){
 				/*************************************/
-				// Step forward
+				// Step back in time
 				for(int iGpu=0; iGpu<nGpu; iGpu++){
 					cudaSetDevice(gpuList[iGpu]);
 
