@@ -141,7 +141,7 @@ void BornElasticShotsGpu_3D::createGpuIdList_3D(){
 }
 
 void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<double4DReg> model, std::shared_ptr<double4DReg> data) const{
-	if (!add) data->scale(0.0);
+	if (!add) data->zero();
 
 	if (_domDec == 0){
 		// Not using domain decomposition
@@ -283,7 +283,7 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
 
       //Launch modeling
       BornObjectVector[iGpu]->forward(false, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
-
+		
       // Store dataSlice into data
       #pragma omp parallel for collapse(3)
       for (int iwc=0; iwc<hyperDataSlices->getAxis(3).n; iwc++){ // wavefield component
@@ -435,7 +435,7 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
 }
 
 void BornElasticShotsGpu_3D::adjoint(const bool add, const std::shared_ptr<double4DReg> model, std::shared_ptr<double4DReg> data) const{
-	if (!add) model->scale(0.0);
+	if (!add) model->zero();
 
 	if (_domDec == 0){
 		// Not using domain decomposition
@@ -474,7 +474,7 @@ void BornElasticShotsGpu_3D::adjoint(const bool add, const std::shared_ptr<doubl
 
   		// Model slice
 			std::shared_ptr<SEP::double4DReg> modelSlice(new SEP::double4DReg(hyperModelSlice));
-			modelSlice->scale(0.0); // Initialize each model slices vector to zero
+			modelSlice->zero(); // Initialize each model slices vector to zero
   		modelSlicesVector.push_back(modelSlice);
 
   		// Data slice
@@ -623,7 +623,7 @@ void BornElasticShotsGpu_3D::adjoint(const bool add, const std::shared_ptr<doubl
     std::shared_ptr<SEP::hypercube> hyperDataSlice(new hypercube(data->getHyper()->getAxis(1), data->getHyper()->getAxis(2), data->getHyper()->getAxis(3)));
 		// Model slice
 		std::shared_ptr<SEP::double4DReg> modelSlice(new SEP::double4DReg(hyperModelSlice));
-		modelSlice->scale(0.0);
+		modelSlice->zero();
 		// Data slice
 		std::shared_ptr<SEP::double3DReg> dataSlice(new SEP::double3DReg(hyperDataSlice));
 

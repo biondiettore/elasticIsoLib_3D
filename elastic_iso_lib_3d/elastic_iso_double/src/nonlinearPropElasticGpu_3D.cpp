@@ -107,7 +107,7 @@ void nonlinearPropElasticGpu_3D::forward(const bool add, const std::shared_ptr<d
 	std::shared_ptr<double2DReg> dataIrreg_sigmayz(new double2DReg(_fdParamElastic->_nts, _nReceiversIrregYZGrid));
 
 	if (!add){
-	  data->scale(0.0);
+	  data->zero();
   } else {
 	  /* Copy the data to the temporary array */
 		// Vx
@@ -378,16 +378,16 @@ void nonlinearPropElasticGpu_3D::adjoint(const bool add, const std::shared_ptr<d
 	std::shared_ptr<double2DReg> dataIrreg_sigmayz(new double2DReg(_fdParamElastic->_nts, _nReceiversIrregYZGrid));
 
 	if (!add) {
-		model->scale(0.0);
-		modelIrreg_vx -> scale(0.0);
-		modelIrreg_vy -> scale(0.0);
-		modelIrreg_vz -> scale(0.0);
-		modelIrreg_sigmaxx -> scale(0.0);
-		modelIrreg_sigmayy -> scale(0.0);
-		modelIrreg_sigmazz -> scale(0.0);
-		modelIrreg_sigmaxz -> scale(0.0);
-		modelIrreg_sigmaxy -> scale(0.0);
-		modelIrreg_sigmayz -> scale(0.0);
+		model->zero();
+		modelIrreg_vx -> zero();
+		modelIrreg_vy -> zero();
+		modelIrreg_vz -> zero();
+		modelIrreg_sigmaxx -> zero();
+		modelIrreg_sigmayy -> zero();
+		modelIrreg_sigmazz -> zero();
+		modelIrreg_sigmaxz -> zero();
+		modelIrreg_sigmaxy -> zero();
+		modelIrreg_sigmayz -> zero();
 	} else {
 		/* Copy from 3d model to respective 2d model components */
 		// fx

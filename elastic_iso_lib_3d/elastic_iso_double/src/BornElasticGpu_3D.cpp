@@ -89,8 +89,28 @@ void BornElasticGpu_3D::forward(const bool add, const std::shared_ptr<double4DRe
 	std::shared_ptr<double2DReg> dataIrreg_sigmaxy(new double2DReg(_fdParamElastic->_nts, _nReceiversIrregXYGrid));
 	std::shared_ptr<double2DReg> dataIrreg_sigmayz(new double2DReg(_fdParamElastic->_nts, _nReceiversIrregYZGrid));
 
+	// Zero out temporary component
+	dataRegDts_vx->zero();
+	dataRegDts_vy->zero();
+	dataRegDts_vz->zero();
+	dataRegDts_sigmaxx->zero();
+	dataRegDts_sigmayy->zero();
+	dataRegDts_sigmazz->zero();
+	dataRegDts_sigmaxz->zero();
+	dataRegDts_sigmaxy->zero();
+	dataRegDts_sigmayz->zero();
+	dataIrreg_vx->zero();
+	dataIrreg_vy->zero();
+	dataIrreg_vz->zero();
+	dataIrreg_sigmaxx->zero();
+	dataIrreg_sigmayy->zero();
+	dataIrreg_sigmazz->zero();
+	dataIrreg_sigmaxz->zero();
+	dataIrreg_sigmaxy->zero();
+	dataIrreg_sigmayz->zero();
+
 	if (!add){
-	  data->scale(0.0);
+	  data->zero();
   } else {
 	  /* Copy the data to the temporary array */
 		// Vx
@@ -203,14 +223,13 @@ void BornElasticGpu_3D::forward(const bool add, const std::shared_ptr<double4DRe
 	chunk = _nReceiversIrregYZGrid*_fdParamElastic->_nts;
 	std::memcpy(data->getVals()+shift, dataIrreg_sigmayz->getVals(), chunk*sizeof(double) );
 
-
 }
 
 
 void BornElasticGpu_3D::adjoint(const bool add, const std::shared_ptr<double4DReg> model, std::shared_ptr<double3DReg> data) const {
 
 	if (!add) {
-		model->scale(0.0);
+		model->zero();
 	}
 
 	std::shared_ptr<double2DReg> dataRegDts_vx(new double2DReg(_fdParamElastic->_nts, _nReceiversRegXGrid));

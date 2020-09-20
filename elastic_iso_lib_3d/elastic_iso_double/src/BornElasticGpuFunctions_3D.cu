@@ -2375,7 +2375,7 @@ void BornElasticAdjGpudomDec_3D(double *sourceRegDts_vx, double *sourceRegDts_vy
   cudaStream_t haloStream[nGpu], bodyStream[nGpu], transferStream[nGpu];
 
 	// Shift for copying correct portion of the model perturbations
-	long long shift = 0;
+	// long long shift = 0;
 
 	for(int iGpu=0; iGpu<nGpu; iGpu++){
     cuda_call(cudaSetDevice(gpuList[iGpu]));
@@ -2406,8 +2406,8 @@ void BornElasticAdjGpudomDec_3D(double *sourceRegDts_vx, double *sourceRegDts_vy
 		nModel[iGpu] *= nx * ny_domDec[iGpu];
 		wavefieldInitializeOnGpu_3D(nModel[iGpu], iGpu);
 		pinnedWavefieldInitializeGpu_3D(nModel[iGpu], iGpu);
-		modelCopyToGpu_3D(drhox+shift, drhoy+shift, drhoz+shift, dlame+shift, dmu+shift, dmuxz+shift, dmuxy+shift, dmuyz+shift, nModel[iGpu], iGpu);
-		shift += yStride*(ny_domDec[iGpu]-2*FAT);
+		// modelCopyToGpu_3D(drhox+shift, drhoy+shift, drhoz+shift, dlame+shift, dmu+shift, dmuxz+shift, dmuxy+shift, dmuyz+shift, nModel[iGpu], iGpu);
+		// shift += yStride*(ny_domDec[iGpu]-2*FAT);
 	}
 
 	//Allocating temporary model arrays
@@ -2793,7 +2793,9 @@ void BornElasticAdjGpudomDec_3D(double *sourceRegDts_vx, double *sourceRegDts_vy
 
 
 	// Copy model back to host
-	shift = 0;
+	// shift = 0;
+	// Shift for copying correct portion of the model perturbations
+	long long shift = 0;
 	for(int iGpu=0; iGpu<nGpu; iGpu++){
 		cuda_call(cudaSetDevice(gpuList[iGpu]));
 		cuda_call(cudaMemcpy(model_drhoxTmp+shift, dev_drhox[iGpu], nModel[iGpu]*sizeof(double), cudaMemcpyDeviceToHost));

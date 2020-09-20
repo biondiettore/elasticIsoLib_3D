@@ -120,7 +120,7 @@ void nonlinearPropElasticShotsGpu_3D::createGpuIdList_3D(){
 }
 
 void nonlinearPropElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<double4DReg> model, std::shared_ptr<double4DReg> data) const{
-	if (!add) data->scale(0.0);
+	if (!add) data->zero();
 
 	if (_domDec == 0){
 		// Not using domain decomposition
@@ -297,7 +297,7 @@ void nonlinearPropElasticShotsGpu_3D::forward(const bool add, const std::shared_
 
 void nonlinearPropElasticShotsGpu_3D::adjoint(const bool add, const std::shared_ptr<double4DReg> model, std::shared_ptr<double4DReg> data) const{
 
-	if (!add) model->scale(0.0);
+	if (!add) model->zero();
 
 	if (_domDec == 0){
 		// Variable declaration
