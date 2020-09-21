@@ -283,7 +283,7 @@ void BornElasticShotsGpu_3D::forward(const bool add, const std::shared_ptr<doubl
 
       //Launch modeling
       BornObjectVector[iGpu]->forward(false, modelSlicesVector[iGpu], dataSlicesVector[iGpu]);
-		
+
       // Store dataSlice into data
       #pragma omp parallel for collapse(3)
       for (int iwc=0; iwc<hyperDataSlices->getAxis(3).n; iwc++){ // wavefield component

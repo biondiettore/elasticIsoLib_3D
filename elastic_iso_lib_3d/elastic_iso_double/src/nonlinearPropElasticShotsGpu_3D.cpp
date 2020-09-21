@@ -449,9 +449,6 @@ void nonlinearPropElasticShotsGpu_3D::adjoint(const bool add, const std::shared_
 		//will loop over number of experiments in parallel. each thread launching one experiment at a time on one gpu.
 		for (int iExp=0; iExp<_nExp; iExp++){
 
-			int iGpu = omp_get_thread_num();
-			int iGpuId = _gpuList[iGpu];
-
 			// Copy model slice
 			long long dataLength = hyperDataSlice->getAxis(1).n*hyperDataSlice->getAxis(2).n;
 			dataLength *= hyperDataSlice->getAxis(3).n;

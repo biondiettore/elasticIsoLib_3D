@@ -2341,7 +2341,7 @@ void BornElasticAdjGpudomDec_3D(double *sourceRegDts_vx, double *sourceRegDts_vy
 	// Other parameters
 	long long yStride = nx * nz;
 	long long minIdxInj[nGpu], maxIdxInj[nGpu]; //Minimum and maximum indices for injection
-	long long minIdxExt[nGpu], maxIdxExt[nGpu]; //Minimum and maximum indices for extraction
+	long long maxIdxExt[nGpu]; //Maximum indices for extraction
 	long long dampCond[nGpu]; //Absorbing boundary condition, shift for body propagation
 	long long nModel[nGpu]; //Total number of samples in each domain
 	int nyBody[nGpu]; //Number of samples+2*FAT for body propagation
@@ -2349,7 +2349,6 @@ void BornElasticAdjGpudomDec_3D(double *sourceRegDts_vx, double *sourceRegDts_vy
 	//Injection-extraction variables
 	minIdxInj[0] = 0;
 	maxIdxInj[0] = yStride*ny_domDec[0];
-	minIdxExt[0] = 0;
 	maxIdxExt[0] = maxIdxInj[0]-yStride*FAT;
 	//Propagation variables
 	nyBody[0] = ny_domDec[0]-FAT;
@@ -2358,7 +2357,6 @@ void BornElasticAdjGpudomDec_3D(double *sourceRegDts_vx, double *sourceRegDts_vy
 		//Injection-extraction variables
 		minIdxInj[iGpu] = maxIdxExt[iGpu-1]-yStride*FAT;
 		maxIdxInj[iGpu] = minIdxInj[iGpu]+yStride*ny_domDec[iGpu];
-		minIdxExt[iGpu] = maxIdxExt[iGpu-1];
 		maxIdxExt[iGpu] = maxIdxInj[iGpu]-yStride*FAT;
 		//Propagation variables
 		if (iGpu == nGpu-1){
@@ -2401,13 +2399,6 @@ void BornElasticAdjGpudomDec_3D(double *sourceRegDts_vx, double *sourceRegDts_vy
 		pinnedWavefieldInitializeGpu_3D(nModel[iGpu], iGpu);
 		modelSetOnGpu_3D(nModel[iGpu], iGpu);
 
-		//initialize wavefield slices to zero
-		nModel[iGpu] = nz;
-		nModel[iGpu] *= nx * ny_domDec[iGpu];
-		wavefieldInitializeOnGpu_3D(nModel[iGpu], iGpu);
-		pinnedWavefieldInitializeGpu_3D(nModel[iGpu], iGpu);
-		// modelCopyToGpu_3D(drhox+shift, drhoy+shift, drhoz+shift, dlame+shift, dmu+shift, dmuxz+shift, dmuxy+shift, dmuyz+shift, nModel[iGpu], iGpu);
-		// shift += yStride*(ny_domDec[iGpu]-2*FAT);
 	}
 
 	//Allocating temporary model arrays
@@ -2797,6 +2788,16 @@ void BornElasticAdjGpudomDec_3D(double *sourceRegDts_vx, double *sourceRegDts_vy
 	// Shift for copying correct portion of the model perturbations
 	long long shift = 0;
 	for(int iGpu=0; iGpu<nGpu; iGpu++){
+		// Zero out temporary slices
+		std::memset(model_drhoxTmp, 0, nModelWhole*sizeof(double));
+		std::memset(model_drhoyTmp, 0, nModelWhole*sizeof(double));
+		std::memset(model_drhozTmp, 0, nModelWhole*sizeof(double));
+		std::memset(model_dlameTmp, 0, nModelWhole*sizeof(double));
+		std::memset(model_dmuTmp, 0, nModelWhole*sizeof(double));
+		std::memset(model_dmuxzTmp, 0, nModelWhole*sizeof(double));
+		std::memset(model_dmuxyTmp, 0, nModelWhole*sizeof(double));
+		std::memset(model_dmuyzTmp, 0, nModelWhole*sizeof(double));
+
 		cuda_call(cudaSetDevice(gpuList[iGpu]));
 		cuda_call(cudaMemcpy(model_drhoxTmp+shift, dev_drhox[iGpu], nModel[iGpu]*sizeof(double), cudaMemcpyDeviceToHost));
 		cuda_call(cudaMemcpy(model_drhoyTmp+shift, dev_drhoy[iGpu], nModel[iGpu]*sizeof(double), cudaMemcpyDeviceToHost));
@@ -2825,20 +2826,8 @@ void BornElasticAdjGpudomDec_3D(double *sourceRegDts_vx, double *sourceRegDts_vy
 		}
 
 		shift += yStride*(ny_domDec[iGpu]-2*FAT);
-		// Zero out temporary slices
-		std::memset(model_drhoxTmp, 0, nModelWhole*sizeof(double));
-		std::memset(model_drhoyTmp, 0, nModelWhole*sizeof(double));
-		std::memset(model_drhozTmp, 0, nModelWhole*sizeof(double));
-		std::memset(model_dlameTmp, 0, nModelWhole*sizeof(double));
-		std::memset(model_dmuTmp, 0, nModelWhole*sizeof(double));
-		std::memset(model_dmuxzTmp, 0, nModelWhole*sizeof(double));
-		std::memset(model_dmuxyTmp, 0, nModelWhole*sizeof(double));
-		std::memset(model_dmuyzTmp, 0, nModelWhole*sizeof(double));
 
 	}
-
-
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	// Deallocate all slices
 	for(int iGpu=0; iGpu<nGpu; iGpu++){
