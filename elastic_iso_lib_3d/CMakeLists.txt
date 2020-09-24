@@ -44,6 +44,7 @@ find_package(TBB REQUIRED)
 
 # Elastic isotropic operators
 add_subdirectory(elastic_iso_double)
+add_subdirectory(elastic_iso_float)
 
 # Elastic isotropic python interface
 add_subdirectory(python/python_double)
