@@ -400,7 +400,102 @@ class nonlinearPropElasticShotsGpu_3D(Op.Operator):
 			result=self.pyOp.dotTest(verb,maxError)
 		return result
 
+###################### Non-linear operator for FWI #############################
+def nonlinearFwiOpInitFloat_3D(args):
+	"""
+	   Function to initialize nonlinear operator
+	   The function will return the necessary variables for operator construction
+	"""
+	# IO objects
+	parObject=genericIO.io(params=sys.argv)
 
+	# Time Axis
+	nts=parObject.getInt("nts")
+	ots=parObject.getFloat("ots",0.0)
+	dts=parObject.getFloat("dts")
+	timeAxis=Hypercube.axis(n=nts,o=ots,d=dts)
+	dummyAxis=Hypercube.axis(n=1)
+	wavefieldAxis=Hypercube.axis(n=9)
+	sourceGeomFile = parObject.getString("sourceGeomFile")
+
+	# Allocate model
+	sourceGeomVector = genericIO.defaultIO.getVector(sourceGeomFile,ndims=3)
+	sourceSimAxis = sourceGeomVector.getHyper().getAxis(2)
+	sourcesHyper=Hypercube.hypercube(axes=[timeAxis,sourceSimAxis,wavefieldAxis,dummyAxis])
+	sourceFloat=SepVector.getSepVector(sourcesHyper,storage="dataFloat")
+
+	# Read sources signals
+	sourcesFile=parObject.getString("sources","noSourcesFile")
+	sourcesInput=genericIO.defaultIO.getVector(sourcesFile,ndims=4)
+	sourceFloat=sourceFloat.getNdArray()
+	sourcesInputNp=sourcesInput.getNdArray()
+	sourceFloat.flat[:]=sourcesInputNp
+
+	# elatic params
+	elasticParam=parObject.getString("elasticParam", "noElasticParamFile")
+	if (elasticParam == "noElasticParamFile"):
+		print("**** ERROR: User did not provide elastic parameter file ****\n")
+		sys.exit()
+	elasticParamFloat=genericIO.defaultIO.getVector(elasticParam)
+	elasticParamFloatConv = elasticParamFloat
+	#Converting model parameters to Rho|Lame|Mu if necessary [kg/m3|Pa|Pa]
+	# 0 ==> correct parameterization
+	# 1 ==> VpVsRho to RhoLameMu (m/s|m/s|kg/m3 -> kg/m3|Pa|Pa)
+	mod_par = parObject.getInt("mod_par",0)
+	if(mod_par != 0):
+		convOp = ElaConv_3D.ElasticConv_3D(elasticParamFloat,mod_par)
+		elasticParamFloatTemp = elasticParamFloat.clone()
+		convOp.forward(False,elasticParamFloatTemp,elasticParamFloatConv)
+
+	# Build sources/receivers geometry
+	sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,sourceAxis=buildSourceGeometry_3D(parObject,elasticParamFloat)
+	recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid,receiverAxis=buildReceiversGeometry_3D(parObject,elasticParamFloat)
+
+	# Allocate data
+	dataHyper=Hypercube.hypercube(axes=[timeAxis,receiverAxis,wavefieldAxis,sourceAxis])
+	dataFloat=SepVector.getSepVector(dataHyper,storage="dataFloat")
+
+	# Outputs
+	return  elasticParamFloat,elasticParamFloatConv,dataFloat,sourceFloat,,parObject,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid
+class nonlinearFwiPropElasticShotsGpu_3D(Op.Operator):
+	"""Wrapper encapsulating PYBIND11 module for non-linear propagator"""
+
+	def __init__(self,domain,range,sources,paramP,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid):
+		#Domain = source wavelet
+		#Range = recorded data space
+		self.setDomainRange(domain,range)
+		#Checking if getCpp is present
+		if("getCpp" in dir(domain)):
+			domain = domain.getCpp()
+		if("getCpp" in dir(paramP)):
+			paramP = paramP.getCpp()
+		if("getCpp" in dir(sources)):
+			sources = sources.getCpp()
+			self.sources = sources.clone()
+		self.pyOp = pyElastic_iso_float_nl_3D.nonlinearPropElasticShotsGpu_3D(domain,paramP,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid)
+		return
+
+	def __str__(self):
+		"""Name of the operator"""
+		return " Ela NLOper 3D "
+
+	def forward(self,add,model,data):
+		#Setting elastic model parameters
+		self.setBackground(model)
+		#Checking if getCpp is present
+		if("getCpp" in dir(data)):
+			data = data.getCpp()
+		with pyElastic_iso_float_nl_3D.ostream_redirect():
+			self.pyOp.forward(add,self.sources,data)
+		return
+
+	def setBackground(self,elasticParam):
+		#Checking if getCpp is present
+		if("getCpp" in dir(elasticParam)):
+			elasticParam = elasticParam.getCpp()
+		with pyElastic_iso_float_nl_3D.ostream_redirect():
+			self.pyOp.setBackground(elasticParam)
+		return
 
 ################################################################################
 ################################### Born #######################################

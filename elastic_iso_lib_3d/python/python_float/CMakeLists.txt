@@ -41,8 +41,11 @@ set(PYTHON_DIR "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
 install( TARGETS pyElastic_iso_float_nl_3D DESTINATION ${PYTHON_DIR}) # Module for nonlinear operator
 install( TARGETS pyElastic_iso_float_born_3D DESTINATION ${PYTHON_DIR}) # Module for nonlinear operator
 install( FILES Elastic_iso_float_3D.py DESTINATION ${PYTHON_DIR})
+install( FILES inversionUtils_3D.py DESTINATION ${PYTHON_DIR})
+
 
 # Installing Python executables
 install( FILES nonlinearPythonFloatMain_3D.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
 install( FILES BornPythonFloatMain_3D.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
 install( FILES waveletFloatMain.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
+install( FILES efwiMain_3D.py PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ DESTINATION bin)
