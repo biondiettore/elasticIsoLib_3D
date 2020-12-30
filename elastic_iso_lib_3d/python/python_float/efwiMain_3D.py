@@ -11,7 +11,7 @@ import os
 import Elastic_iso_float_3D
 import elasticParamConvertModule_3D as ElaConv_3D
 from dataCompModule_3D import ElasticDatComp_3D
-# import interpBSplineModule
+import interpBSplineModule_3D
 # import dataTaperModule
 # import spatialDerivModule
 # import maskGradientModule
@@ -205,6 +205,19 @@ if __name__ == '__main__':
 		data = data_tmp
 	
 	############################# Spline operator ##############################
+	if (spline==1):
+		if(pyinfo): print("--- Using spline interpolation ---")
+		inv_log.addToLog("--- Using spline interpolation ---")
+		# Coarse-grid model
+		modelCoarseInitFile=parObject.getString("modelCoarseInit")
+		modelCoarseInit=genericIO.defaultIO.getVector(modelCoarseInitFile)
+		modelFineInit=modelInit
+		modelInit=modelCoarseInit
+		# Parameter parsing
+		_,_,zOrder,xOrder,yOrder,zSplineMesh,xSplineMesh,ySplineMesh,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat=interpBSplineModule_3D.bSplineIter3dInit(sys.argv,zFat=0,xFat=0,yFat=0)
+		splineOp=interpBSplineModule.bSplineIter3d(modelCoarseInit,modelFineInit,zOrder,xOrder,yOrder,zSplineMesh,xSplineMesh,ySplineMesh,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat)
+		splineNlOp=pyOp.NonLinearOperator(splineOp,splineOp) # Create spline nonlinear operator
+		fwiInvOp=pyOp.CombNonlinearOp(splineNlOp,fwiInvOp)
 	
 	############################### Bounds #####################################
 	minBoundVector,maxBoundVector=createBoundVectors(parObject,modelInit,inv_log)
