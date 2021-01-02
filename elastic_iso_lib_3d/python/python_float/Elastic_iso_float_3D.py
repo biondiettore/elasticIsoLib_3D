@@ -427,9 +427,9 @@ def nonlinearFwiOpInitFloat_3D(args):
 	# Read sources signals
 	sourcesFile=parObject.getString("sources","noSourcesFile")
 	sourcesInput=genericIO.defaultIO.getVector(sourcesFile,ndims=4)
-	sourceFloat=sourceFloat.getNdArray()
+	sourceFloatNp=sourceFloat.getNdArray()
 	sourcesInputNp=sourcesInput.getNdArray()
-	sourceFloat.flat[:]=sourcesInputNp
+	sourceFloatNp.flat[:]=sourcesInputNp
 
 	# elatic params
 	elasticParam=parObject.getString("elasticParam", "noElasticParamFile")
@@ -456,7 +456,7 @@ def nonlinearFwiOpInitFloat_3D(args):
 	dataFloat=SepVector.getSepVector(dataHyper,storage="dataFloat")
 
 	# Outputs
-	return  elasticParamFloat,elasticParamFloatConv,dataFloat,sourceFloat,parObject,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid
+	return elasticParamFloat,elasticParamFloatConv,dataFloat,sourceFloat,parObject,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid
 class nonlinearFwiPropElasticShotsGpu_3D(Op.Operator):
 	"""Wrapper encapsulating PYBIND11 module for non-linear propagator"""
 
@@ -471,7 +471,7 @@ class nonlinearFwiPropElasticShotsGpu_3D(Op.Operator):
 			paramP = paramP.getCpp()
 		if("getCpp" in dir(sources)):
 			sources = sources.getCpp()
-			self.sources = sources.clone()
+		self.sources = sources.clone()
 		self.pyOp = pyElastic_iso_float_nl_3D.nonlinearPropElasticShotsGpu_3D(domain,paramP,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid)
 		return
 

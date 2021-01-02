@@ -121,10 +121,10 @@ if __name__ == '__main__':
 	############################# Initialization ###############################
 
 	# FWI nonlinear operator
-	modelInit,modelInitConv,dataFloat,sourceFloat,,parObject,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid = Elastic_iso_float_3D.nonlinearFwiOpInitFloat_3D(sys.argv)
+	modelInit,modelInitConv,dataFloat,sourceFloat,parObject,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid = Elastic_iso_float_3D.nonlinearFwiOpInitFloat_3D(sys.argv)
 
 	# Born operator
-	_,_,_,+,sourcesSignalsVector,_,_,_,_,_,_,_,_,_,_,_,_,_,_ = Elastic_iso_float_3D.BornOpInitFloat_3D(sys.argv,client)
+	_,_,_,_,sourcesSignalsVector,_,_,_,_,_,_,_,_,_,_,_,_,_,_ = Elastic_iso_float_3D.BornOpInitFloat_3D(sys.argv)
 	
 	############################# Read files ###################################
 	# Seismic source
@@ -149,10 +149,10 @@ if __name__ == '__main__':
 	############################# Instantiation ################################
 	
 	# Nonlinear
-	nonlinearElasticOp=Elastic_iso_float_3D.nonlinearFwiPropElasticShotsGpu_3D(modelInitConv,dataFloat,sourcesFloat,parObject,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid)
+	nonlinearElasticOp=Elastic_iso_float_3D.nonlinearFwiPropElasticShotsGpu_3D(modelInitConv,dataFloat,sourceFloat,parObject.param,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid)
 
 	# Construct nonlinear operator object
-	BornElasticOp=Elastic_iso_float_3D.BornElasticShotsGpu_3D(modelInit,dataFloat,modelInitConv,parObject,sourcesSignalsVector,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid)
+	BornElasticOp=Elastic_iso_float_3D.BornElasticShotsGpu_3D(modelInit,dataFloat,modelInitConv,parObject.param,sourcesSignalsVector,sourcesVectorCenterGrid,sourcesVectorXGrid,sourcesVectorYGrid,sourcesVectorZGrid,sourcesVectorXZGrid,sourcesVectorXYGrid,sourcesVectorYZGrid,recVectorCenterGrid,recVectorXGrid,recVectorYGrid,recVectorZGrid,recVectorXZGrid,recVectorXYGrid,recVectorYZGrid)
 
 	#Born operator pointer for inversion
 	BornElasticOpInv=BornElasticOp
@@ -160,14 +160,10 @@ if __name__ == '__main__':
 	# Conventional FWI non-linear operator (with mask if requested)
 	if maskGradientOp is not None:
 		BornElasticOpInv=pyOp.ChainOperator(maskGradientOp,BornElasticOp)
-	if client:
-		fwiInvOp=pyOp.NonLinearOperator(nonlinearElasticOp,BornElasticOpInv,BornElasticOpDask.set_background)
-	else:
-		fwiInvOp=pyOp.NonLinearOperator(nonlinearElasticOp,BornElasticOpInv,BornElasticOp.setBackground)
 
-	# Dask model vector not necessary any more
-	modelInit=modelInitLocal
-	Elastic parameter conversion if any
+	fwiInvOp=pyOp.NonLinearOperator(nonlinearElasticOp,BornElasticOpInv,BornElasticOp.setBackground)
+
+	# Elastic parameter conversion if any
 	mod_par = parObject.getInt("mod_par",0)
 	if(mod_par != 0):
 		convOp = ElaConv_3D.ElasticConv_3D(modelInit,mod_par)
@@ -215,7 +211,7 @@ if __name__ == '__main__':
 		modelInit=modelCoarseInit
 		# Parameter parsing
 		_,_,zOrder,xOrder,yOrder,zSplineMesh,xSplineMesh,ySplineMesh,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat=interpBSplineModule_3D.bSplineIter3dInit(sys.argv,zFat=0,xFat=0,yFat=0)
-		splineOp=interpBSplineModule.bSplineIter3d(modelCoarseInit,modelFineInit,zOrder,xOrder,yOrder,zSplineMesh,xSplineMesh,ySplineMesh,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat)
+		splineOp=interpBSplineModule_3D.bSplineIter3d(modelCoarseInit,modelFineInit,zOrder,xOrder,yOrder,zSplineMesh,xSplineMesh,ySplineMesh,zDataAxis,xDataAxis,yDataAxis,nzParam,nxParam,nyParam,scaling,zTolerance,xTolerance,yTolerance,zFat,xFat,yFat)
 		splineNlOp=pyOp.NonLinearOperator(splineOp,splineOp) # Create spline nonlinear operator
 		fwiInvOp=pyOp.CombNonlinearOp(splineNlOp,fwiInvOp)
 	
