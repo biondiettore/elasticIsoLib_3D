@@ -3,7 +3,7 @@
 Elastic data sampling operator
 
 USAGE EXAMPLE:
-	dataCompMain.py input=elasticModel.H output=elastic_wavelet.H comp=vx,vz,sxx,szz,sxz
+	dataCompMain_3D.py input= output= comp=vx,vz,sxx,szz,sxz
 
 INPUT PARAMETERS:
 	input  = [no default] - string; Header file defining elastic data directly outputted by elastic propagator
