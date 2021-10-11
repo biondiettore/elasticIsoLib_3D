@@ -8,8 +8,8 @@ Note use cmake 3.14
 
 When the package is cloned, run the following command once:
 ```
-git submodule update --init --recursive -- elastic_iso_lib/external/ioLibs
-git submodule update --init --recursive -- elastic_iso_lib/external/pySolver
+git submodule update --init --recursive -- elastic_iso_lib_3d/external/ioLibs
+git submodule update --init --recursive -- elastic_iso_lib_3d/external/pySolver
 
 ```
 
