@@ -5,6 +5,7 @@ import Hypercube, SepVector
 from collections import Counter
 import numpy as np
 
+P_factor = 1.0/3.0
 
 class ElasticDatComp_3D(pyOperator.Operator):
 	"""
@@ -84,7 +85,7 @@ class ElasticDatComp_3D(pyOperator.Operator):
 		#Checking if pressure was requested to be sampled
 		if("p" in self.comp_list):
 			idx = self.comp_list.index("p")
-			dataNd[:,idx,:,:] += 0.5*(modelNd[:,3,:,:]+modelNd[:,4,:,:]+modelNd[:,5,:,:])
+			dataNd[:,idx,:,:] += P_factor*(modelNd[:,3,:,:]+modelNd[:,4,:,:]+modelNd[:,5,:,:])
 		return
 
 	def adjoint(self,add,model,data):
@@ -134,7 +135,7 @@ class ElasticDatComp_3D(pyOperator.Operator):
 		#Checking if pressure was requested to be sampled
 		if("p" in self.comp_list):
 			idx = self.comp_list.index("p")
-			modelNd[:,3,:,:] += 0.5*dataNd[:,idx,:,:]
-			modelNd[:,4,:,:] += 0.5*dataNd[:,idx,:,:]
-			modelNd[:,5,:,:] += 0.5*dataNd[:,idx,:,:]
+			modelNd[:,3,:,:] += P_factor*dataNd[:,idx,:,:]
+			modelNd[:,4,:,:] += P_factor*dataNd[:,idx,:,:]
+			modelNd[:,5,:,:] += P_factor*dataNd[:,idx,:,:]
 		return
