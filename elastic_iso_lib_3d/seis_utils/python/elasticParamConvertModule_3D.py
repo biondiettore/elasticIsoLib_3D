@@ -80,8 +80,8 @@ class ElasticConvJab_3D(pyOperator.Operator):
 		if(self.conv_type == 1 or self.conv_type == 2):
 			#rho' = rho => drho'/drho = 1
 			dataNd[0,:] += modelNd[2,:]
-			#lame = (Vp*Vp-2*Vs*Vs)*rho => dlame/drho = (Vp*Vp-2*Vs*Vs), dlame/dVs = -4*Vs*Vs*rho, dlame/dVp = 2*Vp*Vp*rho
-			dataNd[1,:] += (backgroundNd[0,:]*backgroundNd[0,:]-2.0*backgroundNd[1,:]*backgroundNd[1,:])*modelNd[2,:] - 4.0*backgroundNd[1,:]*backgroundNd[1,:]*modelNd[1,:] + 2.0*backgroundNd[0,:]*backgroundNd[0,:]*modelNd[0,:]
+			#lame = (Vp*Vp-2*Vs*Vs)*rho => dlame/drho = (Vp*Vp-2*Vs*Vs), dlame/dVs = -4*Vs*rho, dlame/dVp = 2*Vp*rho
+			dataNd[1,:] += (backgroundNd[0,:]*backgroundNd[0,:]-2.0*backgroundNd[1,:]*backgroundNd[1,:])*modelNd[2,:] - 4.0*backgroundNd[1,:]*backgroundNd[2,:]*modelNd[1,:] + 2.0*backgroundNd[0,:]*backgroundNd[2,:]*modelNd[0,:]
 			#mu = Vs*Vs*rho => dmu/drho = Vs*Vs, dmu/dVs = 2*Vs*rho
 			dataNd[2,:] += backgroundNd[1,:]*backgroundNd[1,:]*modelNd[2,:] + 2.0*backgroundNd[1,:]*backgroundNd[2,:]*modelNd[1,:]
 		else:
@@ -98,9 +98,9 @@ class ElasticConvJab_3D(pyOperator.Operator):
 		if(not add): model.zero()
 		if(self.conv_type == 1 or self.conv_type == 2):
 			#Vp
-			modelNd[0,:] += 2.0*backgroundNd[0,:]*backgroundNd[0,:]*dataNd[1,:]
+			modelNd[0,:] += 2.0*backgroundNd[0,:]*backgroundNd[2,:]*dataNd[1,:]
 			#Vs
-			modelNd[1,:] += 2.0*backgroundNd[1,:]*backgroundNd[2,:]*dataNd[2,:] - 4.0*backgroundNd[1,:]*backgroundNd[1,:]*dataNd[1,:]
+			modelNd[1,:] += 2.0*backgroundNd[1,:]*backgroundNd[2,:]*dataNd[2,:] - 4.0*backgroundNd[1,:]*backgroundNd[2,:]*dataNd[1,:]
 			#Rho
 			modelNd[2,:] += dataNd[0,:] + (backgroundNd[0,:]*backgroundNd[0,:]-2.0*backgroundNd[1,:]*backgroundNd[1,:])*dataNd[1,:] + backgroundNd[1,:]*backgroundNd[1,:]*dataNd[2,:]
 		else:
